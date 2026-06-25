@@ -51,6 +51,12 @@ Route::prefix('v1')->group(function () {
     Route::get('doctors', [DoctorListController::class, 'index']);
     Route::get('about-us', [AboutUsController::class, 'index']);
 
+    // Temporary route to run migrations on Vercel
+    Route::get('/migrate-now', function () {
+        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true]);
+        return 'Database migrated successfully!';
+    });
+
     // Auth Routes (Public)
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
