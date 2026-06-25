@@ -53,8 +53,16 @@ Route::prefix('v1')->group(function () {
 
     // Temporary route to run migrations on Vercel
     Route::get('/migrate-now', function () {
-        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true]);
-        return 'Database migrated successfully!';
+        try {
+            \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true]);
+            return 'Database migrated successfully!';
+        } catch (\Exception $e) {
+            return 'Error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString();
+        }
+    });
+
+    Route::get('/test-boot', function () {
+        return 'Laravel is booting correctly!';
     });
 
     // Auth Routes (Public)
