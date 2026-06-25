@@ -49,6 +49,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
             }
         });
 
+        // Force JSON for all exceptions to avoid view component crashes
+        $exceptions->shouldRenderJsonWhen(function (Request $request, \Throwable $e) {
+            return true;
+        });
+
         // 404 +' JSON
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
             return response()->json([
@@ -60,13 +65,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
 
         // 429 Too Many Requests → JSON
         $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Too many requests. Please slow down.',
-                    'data'    => null,
-                ], 429);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many requests. Please try again later.',
+                'data'    => null,
+            ], 429);
         });
 
     })->create();
