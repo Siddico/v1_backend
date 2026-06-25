@@ -1,0 +1,28 @@
+{
+    "model_name": "Stroke Risk Prediction Model (LightGBM)",
+    "version": "1.0.0",
+    "metrics": {
+        "validation_accuracy": 0.9925714285714285,
+        "validation_f1": 0.9898674980514419,
+        "validation_recall": 0.9856422196352348
+    },
+    "features": [
+        "age",
+        "gender_Male",
+        "chest_pain",
+        "high_blood_pressure",
+        "irregular_heartbeat",
+        "shortness_of_breath",
+        "fatigue_weakness",
+        "dizziness",
+        "swelling_edema",
+        "neck_jaw_pain",
+        "excessive_sweating",
+        "persistent_cough",
+        "nausea_vomiting",
+        "chest_discomfort",
+        "cold_hands_feet",
+        "snoring_sleep_apnea",
+        "anxiety_doom"
+    ]
+}

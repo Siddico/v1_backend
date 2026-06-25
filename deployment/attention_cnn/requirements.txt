@@ -1,0 +1,12 @@
+
+tensorflow-cpu
+keras
+onnxruntime
+numpy
+scipy
+h5py
+scikit-learn
+fastapi
+uvicorn
+pydantic
+python-multipart

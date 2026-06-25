@@ -1,0 +1,585 @@
+{
+  "info": {
+    "name": "BrainGuard API v1 - Clean Architecture",
+    "description": "Postman Collection divided into highly modular folders matching the clean backend architecture.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://brainguard.devawy.com/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_AUTH_TOKEN_HERE",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Authentication",
+      "description": "Endpoints related to user registration, login, OTP, and session management.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"role\": \"patient\",\n    \"full_name\": \"John Doe\",\n    \"email\": \"patient2@example.com\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": [ "{{base_url}}" ], "path": [ "auth", "register" ] }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"patient@example.com\",\n    \"password\": \"password\",\n    \"fcm_token\": \"optional_device_token\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": [ "{{base_url}}" ], "path": [ "auth", "login" ] }
+          }
+        },
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"patient@example.com\",\n    \"type\": \"registration\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/otp/send", "host": [ "{{base_url}}" ], "path": [ "auth", "otp", "send" ] }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"patient@example.com\",\n    \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/otp/verify", "host": [ "{{base_url}}" ], "path": [ "auth", "otp", "verify" ] }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"patient@example.com\",\n    \"password\": \"newpassword123\",\n    \"password_confirmation\": \"newpassword123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/password/reset", "host": [ "{{base_url}}" ], "path": [ "auth", "password", "reset" ] }
+          }
+        },
+        {
+          "name": "Get Profile (Me)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/auth/me", "host": [ "{{base_url}}" ], "path": [ "auth", "me" ] }
+          }
+        },
+        {
+          "name": "Update FCM Token",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fcm_token\": \"new_token_from_flutter\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/fcm-token", "host": [ "{{base_url}}" ], "path": [ "auth", "fcm-token" ] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/auth/logout", "host": [ "{{base_url}}" ], "path": [ "auth", "logout" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Patient Profile & Basics",
+      "description": "Manage patient personal info, emergency contacts, and app static data.",
+      "item": [
+        {
+          "name": "About Us",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/about-us", "host": [ "{{base_url}}" ], "path": [ "about-us" ] }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/profile", "host": [ "{{base_url}}" ], "path": [ "patient", "profile" ] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"date_of_birth\": \"1990-01-01\",\n    \"gender\": \"male\",\n    \"blood_type\": \"O+\",\n    \"weight\": 75,\n    \"height\": 175,\n    \"allergies\": [\"Peanuts\"],\n    \"chronic_diseases\": [\"Diabetes\"],\n    \"family_history\": [\"Heart disease\"],\n    \"emergency_contact_name\": \"Jane Doe\",\n    \"emergency_contact_phone\": \"+201000000000\",\n    \"emergency_contact_relation\": \"Wife\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/profile", "host": [ "{{base_url}}" ], "path": [ "patient", "profile" ] }
+          }
+        },
+        {
+          "name": "Get Emergency Contact",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/emergency", "host": [ "{{base_url}}" ], "path": [ "patient", "emergency" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Health Data & Signals",
+      "description": "Vitals tracking, health measurements, and device signals (ECG/PPG).",
+      "item": [
+        {
+          "name": "Charts Dashboard",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/charts-dashboard", "host": [ "{{base_url}}" ], "path": [ "patient", "charts-dashboard" ] }
+          }
+        },
+        {
+          "name": "Get Health Data",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/health-data", "host": [ "{{base_url}}" ], "path": [ "patient", "health-data" ] }
+          }
+        },
+        {
+          "name": "Create Health Data",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"temperature\": 37.2,\n    \"blood_pressure\": \"120/80\",\n    \"heart_rate\": 72,\n    \"spo2\": 98,\n    \"glucose_level\": 95,\n    \"weight\": 75.5\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/health-data", "host": [ "{{base_url}}" ], "path": [ "patient", "health-data" ] }
+          }
+        },
+        {
+          "name": "Get Signals",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/signals", "host": [ "{{base_url}}" ], "path": [ "patient", "signals" ] }
+          }
+        },
+        {
+          "name": "Create Signal",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"signal_type\": \"ecg\",\n    \"value\": \"1.23,2.34,3.45\",\n    \"unit\": \"mV\",\n    \"device_id\": \"smartwatch_123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/signals", "host": [ "{{base_url}}" ], "path": [ "patient", "signals" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - AI Predictions & Records",
+      "description": "Stroke predictions, medical files, radiology images, and prediction history.",
+      "item": [
+        {
+          "name": "AI Predict (EHR / MAT)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"prediction_type\": \"AI_QUESTIONNAIRE\",\n    \"age\": 55,\n    \"hypertension\": 1,\n    \"heart_disease\": 0,\n    \"ever_married\": 1,\n    \"work_type\": \"Private\",\n    \"Residence_type\": \"Urban\",\n    \"avg_glucose_level\": 105.2,\n    \"bmi\": 28.5,\n    \"smoking_status\": \"formerly smoked\",\n    \"chest_pain\": true,\n    \"dizziness\": false,\n    \"numbness\": true,\n    \"vision_issues\": false,\n    \"speech_difficulty\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/predict", "host": [ "{{base_url}}" ], "path": [ "patient", "predict" ] }
+          }
+        },
+        {
+          "name": "Prediction History",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/predictions", "host": [ "{{base_url}}" ], "path": [ "patient", "predictions" ] }
+          }
+        },
+        {
+          "name": "Upload Medical File",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"file_url\": \"https://res.cloudinary.com/demo/image/upload/sample.jpg\",\n    \"file_name\": \"My ECG\",\n    \"category\": \"ecg\",\n    \"extension\": \"jpg\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/files", "host": [ "{{base_url}}" ], "path": [ "patient", "files" ] }
+          }
+        },
+        {
+          "name": "Radiology Upload",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"file_url\": \"https://res.cloudinary.com/...\",\n    \"imaging_type\": \"mri_brain\",\n    \"report_url\": \"https://res.cloudinary.com/.../report.pdf\",\n    \"scan_date\": \"2024-05-10\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/radiology", "host": [ "{{base_url}}" ], "path": [ "patient", "radiology" ] }
+          }
+        },
+        {
+          "name": "Records & Files List",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/records", "host": [ "{{base_url}}" ], "path": [ "patient", "records" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Doctors & Networking",
+      "description": "Connecting with doctors, QR code scanning, and relationship management.",
+      "item": [
+        {
+          "name": "My Linked Doctors",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/my-doctors?search=", "host": [ "{{base_url}}" ], "path": [ "patient", "my-doctors" ] }
+          }
+        },
+        {
+          "name": "Doctor Profile",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/doctors/1", "host": [ "{{base_url}}" ], "path": [ "patient", "doctors", "1" ] }
+          }
+        },
+        {
+          "name": "Generate My QR",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/patient/qr", "host": [ "{{base_url}}" ], "path": [ "patient", "qr" ] }
+          }
+        },
+        {
+          "name": "Verify Doctor QR Code",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"uuid\": \"some-uuid-from-qr\",\n    \"role\": \"doctor\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/qr/scan", "host": [ "{{base_url}}" ], "path": [ "patient", "qr", "scan" ] }
+          }
+        },
+        {
+          "name": "Get Relationship Requests",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/relationship-requests", "host": [ "{{base_url}}" ], "path": [ "patient", "relationship-requests" ] }
+          }
+        },
+        {
+          "name": "Send Relationship Request",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"doctor_id\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/relationship-requests", "host": [ "{{base_url}}" ], "path": [ "patient", "relationship-requests" ] }
+          }
+        },
+        {
+          "name": "Cancel Relationship Request",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/patient/relationship-requests/1", "host": [ "{{base_url}}" ], "path": [ "patient", "relationship-requests", "1" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Chatbot (AI Assistant)",
+      "description": "Interact with the AI Assistant using Streaming (Server-Sent Events).",
+      "item": [
+        {
+          "name": "List Sessions",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/chatbot/sessions", "host": [ "{{base_url}}" ], "path": [ "patient", "chatbot", "sessions" ] }
+          }
+        },
+        {
+          "name": "Create Session",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Stroke advice\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/chatbot/sessions", "host": [ "{{base_url}}" ], "path": [ "patient", "chatbot", "sessions" ] }
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/patient/chatbot/sessions/1", "host": [ "{{base_url}}" ], "path": [ "patient", "chatbot", "sessions", "1" ] }
+          }
+        },
+        {
+          "name": "List Session Messages",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/chatbot/sessions/1/messages", "host": [ "{{base_url}}" ], "path": [ "patient", "chatbot", "sessions", "1", "messages" ] }
+          }
+        },
+        {
+          "name": "Send Message (Streaming)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": \"I have a headache, what should I do?\",\n    \"attachment_url\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/chatbot/sessions/1/messages", "host": [ "{{base_url}}" ], "path": [ "patient", "chatbot", "sessions", "1", "messages" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Doctor Chat",
+      "description": "Direct communication between patient and connected doctors.",
+      "item": [
+        {
+          "name": "Get Chat Messages",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/chat?doctor_id=1", "host": [ "{{base_url}}" ], "path": [ "patient", "chat" ] }
+          }
+        },
+        {
+          "name": "Send Chat Message",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"receiver_id\": 1,\n    \"receiver_type\": \"doctor\",\n    \"content\": \"Hello doctor, I have a headache.\",\n    \"attachment_url\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/chat", "host": [ "{{base_url}}" ], "path": [ "patient", "chat" ] }
+          }
+        },
+        {
+          "name": "Mark Chat as Read",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"sender_id\": 1,\n    \"sender_type\": \"doctor\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/chat/read", "host": [ "{{base_url}}" ], "path": [ "patient", "chat", "read" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Appointments",
+      "description": "Manage doctor appointments.",
+      "item": [
+        {
+          "name": "Get Appointments",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/appointments", "host": [ "{{base_url}}" ], "path": [ "patient", "appointments" ] }
+          }
+        },
+        {
+          "name": "Create Appointment",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"doctor_id\": 1,\n    \"doctor_name\": \"Dr. Ahmed (External)\",\n    \"appointment_date\": \"2024-06-30 10:00:00\",\n    \"type\": \"online\",\n    \"status\": \"scheduled\",\n    \"notes\": \"Follow up\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/appointments", "host": [ "{{base_url}}" ], "path": [ "patient", "appointments" ] }
+          }
+        },
+        {
+          "name": "Get Appointment Details",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/appointments/1", "host": [ "{{base_url}}" ], "path": [ "patient", "appointments", "1" ] }
+          }
+        },
+        {
+          "name": "Update Appointment",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"cancelled\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/appointments/1", "host": [ "{{base_url}}" ], "path": [ "patient", "appointments", "1" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Medications",
+      "description": "Manage daily medications and prescriptions.",
+      "item": [
+        {
+          "name": "Get Medications",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/medications", "host": [ "{{base_url}}" ], "path": [ "patient", "medications" ] }
+          }
+        },
+        {
+          "name": "Create Medication",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"medication_name\": \"Aspirin\",\n    \"dosage\": \"100mg\",\n    \"frequency\": \"Once daily\",\n    \"start_date\": \"2024-01-01\",\n    \"end_date\": \"2024-12-31\",\n    \"instructions\": \"Take after breakfast\",\n    \"image_url\": \"https://res.cloudinary.com/...\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/medications", "host": [ "{{base_url}}" ], "path": [ "patient", "medications" ] }
+          }
+        },
+        {
+          "name": "Update Medication",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"dosage\": \"50mg\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/patient/medications/1", "host": [ "{{base_url}}" ], "path": [ "patient", "medications", "1" ] }
+          }
+        },
+        {
+          "name": "Delete Medication",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/patient/medications/1", "host": [ "{{base_url}}" ], "path": [ "patient", "medications", "1" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Notifications & Reports",
+      "description": "Firebase push notification history and medical reports.",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/notifications", "host": [ "{{base_url}}" ], "path": [ "patient", "notifications" ] }
+          }
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/patient/notifications/1", "host": [ "{{base_url}}" ], "path": [ "patient", "notifications", "1" ] }
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/patient/notifications/1", "host": [ "{{base_url}}" ], "path": [ "patient", "notifications", "1" ] }
+          }
+        },
+        {
+          "name": "Get Reports",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/patient/reports", "host": [ "{{base_url}}" ], "path": [ "patient", "reports" ] }
+          }
+        }
+      ]
+    }
+  ]
+}

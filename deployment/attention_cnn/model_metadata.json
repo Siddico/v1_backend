@@ -1,0 +1,15 @@
+{
+    "model_name": "Attention CNN",
+    "input_shape": [
+        1250,
+        1
+    ],
+    "sampling_rate": 50,
+    "classes": [
+        "AF",
+        "NSR",
+        "PAC"
+    ],
+    "test_accuracy": 0.9877,
+    "macro_f1": 0.938
+}
