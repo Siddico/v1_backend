@@ -49,15 +49,13 @@ $app = Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        // 404 → JSON
+        // 404 +' JSON
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Resource not found.',
-                    'data'    => null,
-                ], 404);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Endpoint not found.',
+                'data'    => null,
+            ], 404);
         });
 
         // 429 Too Many Requests → JSON
