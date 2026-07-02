@@ -1,0 +1,342 @@
+{
+    "info": {
+        "_postman_id": "c34a214a-8e97-4347-a2cc-c24f3536bd6b",
+        "name": "BrainGuard API - Researcher",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "53087425",
+        "_collection_link": "https://go.postman.co/collection/53087425-c34a214a-8e97-4347-a2cc-c24f3536bd6b?source=collection_link"
+    },
+    "item": [
+        {
+            "name": "1. Researcher Profile",
+            "item": [
+                {
+                    "name": "Get Researcher Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/researcher/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "profile"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Researcher Profile",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"full_name\": \"Dr. Belal Researcher\",\r\n    \"institution\": \"Bani Sueif University\",\r\n    \"research_field\": \"Neurology & AI\",\r\n    \"phone\": \"01012345678\",\r\n    \"gender\": \"male\",\r\n    \"email\": \"researcher@banisueif.edu\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/researcher/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "profile"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "2. Research Alerts",
+            "item": [
+                {
+                    "name": "Get Research Alerts",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/researcher/alerts",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "alerts"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "3. Research Papers Repository",
+            "item": [
+                {
+                    "name": "Create Paper",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"paper_name\": \"AI-Based Stroke Detection Using ECG\",\r\n    \"publisher_name\": \"IEEE\",\r\n    \"category_topic\": \"Medical AI\",\r\n    \"date\": \"2026-03-31\",\r\n    \"description\": \"This paper presents a novel approach to stroke detection.\",\r\n    \"upload_type\": \"manual\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/researcher/papers",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "papers"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get All Papers",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/researcher/papers",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "papers"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Paper Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/researcher/papers/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "papers",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Paper",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"paper_name\": \"Updated: AI-Based Stroke Detection\",\r\n    \"status\": \"approved\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/researcher/papers/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "papers",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Add Paper Sections",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"abstract\": \"This study investigates stroke prediction using AI.\",\r\n    \"keywords\": \"stroke, ECG, AI, deep learning\",\r\n    \"introduction\": \"Stroke is a leading cause of death worldwide.\",\r\n    \"methodology\": \"We used TFLite model trained on ECG signals.\",\r\n    \"result\": \"Achieved 94% accuracy in prediction.\",\r\n    \"discussion\": \"Results confirm AI effectiveness in stroke detection.\",\r\n    \"conclusion\": \"AI can significantly improve stroke prediction.\",\r\n    \"references\": \"IEEE 2024, WHO 2023\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/researcher/papers/1/sections",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "papers",
+                                "1",
+                                "sections"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save Paper",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"is_favorite\": true\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/researcher/papers/1/save",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "papers",
+                                "1",
+                                "save"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "4. Search & Community Interactions",
+            "item": [
+                {
+                    "name": "Search Papers",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/researcher/papers/search?keyword=stroke&field=neurology",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "papers",
+                                "search"
+                            ],
+                            "query": [
+                                {
+                                    "key": "keyword",
+                                    "value": "stroke"
+                                },
+                                {
+                                    "key": "field",
+                                    "value": "neurology"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Interact with Paper (Like)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"is_liked\": true\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/researcher/papers/1/interact",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "researcher",
+                                "papers",
+                                "1",
+                                "interact"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "token",
+            "value": ""
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "packages": [],
+                "requests": [],
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "packages": [],
+                "requests": [],
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ]
+}

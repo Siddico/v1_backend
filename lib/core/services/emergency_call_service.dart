@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:url_launcher/url_launcher.dart';
 import '../../shared/data/datasources/user_remote_datasource.dart';
+import '../networking/api_constants.dart';
+import '../networking/api_response_parser.dart';
+import '../networking/dio_factory.dart';
 
 /// Service responsible for placing emergency calls when the AI model
 /// returns a critical stroke-risk prediction.
@@ -18,6 +21,22 @@ class EmergencyCallService {
   // Guard: only trigger one call per [_cooldownDuration] window.
   static const _cooldownDuration = Duration(minutes: 15);
   DateTime? _lastCallAttempt;
+
+  Future<List<Map<String, dynamic>>> fetchEmergencyRecommendations() async {
+    try {
+      final dio = await DioFactory.getDio();
+      final response = await dio.get(ApiConstants.patientEmergency);
+      if (response.statusCode == 200) {
+        final list = ApiResponseParser.extractList(
+          response.data is Map ? response.data['data'] : response.data,
+        );
+        return list.whereType<Map<String, dynamic>>().toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
 
   /// Fetches the patient's emergency contact from Firestore and places
   /// a phone call if [isCritical] is true and the cooldown has passed.

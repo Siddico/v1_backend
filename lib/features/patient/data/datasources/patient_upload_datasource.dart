@@ -87,7 +87,7 @@ class BackendPatientUploadDataSource implements PatientUploadRemoteDataSource {
             'upload_type': category,
             'description': file.name,
             'file_url': downloadUrl,
-            'uploaded_at': DateTime.now().toUtc().toIso8601String().split('.')[0] + 'Z',
+            'uploaded_at': '${DateTime.now().toUtc().toIso8601String().split('.')[0]}Z',
           },
         );
       }
@@ -102,8 +102,6 @@ class BackendPatientUploadDataSource implements PatientUploadRemoteDataSource {
     final String baseUrl = dotenv.env['VERCEL_BASE_URL'] ?? 'https://stroke-prediction-mocha.vercel.app';
     final uri = Uri.parse('$baseUrl/api/ai/predict-mat');
     final request = http.MultipartRequest('POST', uri);
-    
-    // Firebase auth is removed, you may need to implement Laravel token here if the Vercel backend expects it
     
     if (file.path != null) {
       request.files.add(await http.MultipartFile.fromPath('file', file.path!));

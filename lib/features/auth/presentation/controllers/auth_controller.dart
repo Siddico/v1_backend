@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Removed firebase_auth import
 
 import '../../../../core/enums/gender.dart';
 import '../../../../core/enums/user_role.dart';
@@ -84,6 +83,14 @@ class AuthController extends StateNotifier<AsyncValue<UserEntity?>> {
     });
   }
 
+  Future<void> sendPasswordResetLink({required String email}) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await _repository.sendPasswordResetLink(email);
+      return state.valueOrNull;
+    });
+  }
+
   Future<String> verifyOtp({required String email, required String code}) async {
     state = const AsyncValue.loading();
     try {
@@ -114,8 +121,7 @@ class AuthController extends StateNotifier<AsyncValue<UserEntity?>> {
     });
   }
 
-  /// The user has verified their phone number via Firebase SMS and is currently signed in to the Phone account.
-  /// We update the password of this currently signed-in Phone account.
+  /// The user verifies via OTP and resets their password.
   Future<void> resetPasswordWithPhoneBackend({
     required String phone,
     required String newPassword,

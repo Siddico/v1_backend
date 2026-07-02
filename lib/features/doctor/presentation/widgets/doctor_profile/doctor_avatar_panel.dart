@@ -9,7 +9,8 @@ import 'package:grad_imp_1/core/networking/dio_factory.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/constants/app_images.dart';
 import '../../../../../core/theme/app_text_styles.dart' show AppTextStyles;
-import '../../../../../core/services/profile_storage_service.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
+import 'package:dio/dio.dart';
 import '../../../../../shared/ui/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../auth/presentation/controllers/auth_providers.dart';
@@ -66,14 +67,21 @@ class _DoctorAvatarPanelState extends ConsumerState<DoctorAvatarPanel> {
     try {
       final uid = ref.read(authStateProvider).valueOrNull?.id;
       if (uid == null) throw Exception('Not signed in');
-      final url = await ProfileStorageService().uploadProfileImage(
-        uid: uid,
-        imageFile: _localImage!,
-      );
+
       final dio = await DioFactory.getDio();
-      await dio.put(
+      final token = await TokenStorage.getToken();
+      final formData = FormData.fromMap({
+        '_method': 'PUT',
+        'image': await MultipartFile.fromFile(_localImage!.path, filename: xFile.name),
+      });
+
+      await dio.post(
         ApiConstants.doctorProfile,
-        data: {'photo_url': url, 'image': url},
+        data: formData,
+        options: Options(headers: {
+           if (token != null) 'Authorization': 'Bearer $token',
+           'Accept': 'application/json',
+        }),
       );
       ref.invalidate(authStateProvider);
       // ignore: use_build_context_synchronously

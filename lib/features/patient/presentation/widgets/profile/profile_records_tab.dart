@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../auth/presentation/controllers/auth_providers.dart';
+import 'package:grad_imp_1/core/networking/api_constants.dart';
+import 'package:grad_imp_1/core/networking/dio_factory.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_text_styles.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -18,7 +18,7 @@ class ProfileRecordsTab extends ConsumerStatefulWidget {
 }
 
 class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
-  late Stream<QuerySnapshot> _uploadsStream;
+  late Future<List<Map<String, dynamic>>> _recordsFuture;
   bool _imagesExpanded = false;
   bool _pdfsExpanded = false;
   bool _matsExpanded = false;
@@ -26,13 +26,40 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
   @override
   void initState() {
     super.initState();
-    final uid = ref.read(authStateProvider).valueOrNull?.id ?? '';
-    _uploadsStream = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('uploads')
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+    _recordsFuture = _fetchRecords();
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchRecords() async {
+    try {
+      final dio = await DioFactory.getDio();
+      final results = await Future.wait([
+        dio.get(ApiConstants.patientRadiology),
+        dio.get(ApiConstants.patientSignals),
+      ]);
+
+      final List<Map<String, dynamic>> combined = [];
+      for (var response in results) {
+        if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+          final data = response.data is Map ? (response.data['data'] ?? []) : response.data;
+          final List<dynamic> list = data is Map ? (data['radiology_uploads'] ?? data['signals'] ?? data['list'] ?? []) : (data is List ? data : []);
+          for (var item in list) {
+            if (item is Map) {
+              final doc = Map<String, dynamic>.from(item);
+              combined.add({
+                'fileName': doc['description'] ?? doc['file_name'] ?? doc['title'] ?? 'Record',
+                'downloadUrl': doc['file_url'] ?? doc['url'] ?? '',
+                'category': doc['upload_type'] ?? doc['signal_type'] ?? doc['category'] ?? 'other',
+                'createdAt': doc['uploaded_at'] ?? doc['created_at'] ?? doc['updated_at'],
+              });
+            }
+          }
+        }
+      }
+      return combined;
+    } catch (e) {
+      debugPrint('Error fetching patient records: $e');
+      return [];
+    }
   }
 
   String _cleanCategoryName(BuildContext context, String category) {
@@ -76,8 +103,8 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _uploadsStream,
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _recordsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -91,7 +118,7 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
           );
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        final docs = snapshot.data ?? [];
         if (docs.isEmpty) {
           return Container(
             width: double.infinity,
@@ -132,11 +159,7 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
 
         // Filter documents by type
         final imageDocs = docs.where((doc) {
-          final name =
-              (doc.data() as Map<String, dynamic>)['fileName']
-                  ?.toString()
-                  .toLowerCase() ??
-              '';
+          final name = doc['fileName']?.toString().toLowerCase() ?? '';
           return name.endsWith('.png') ||
               name.endsWith('.jpg') ||
               name.endsWith('.jpeg') ||
@@ -145,20 +168,12 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
         }).toList();
 
         final pdfDocs = docs.where((doc) {
-          final name =
-              (doc.data() as Map<String, dynamic>)['fileName']
-                  ?.toString()
-                  .toLowerCase() ??
-              '';
+          final name = doc['fileName']?.toString().toLowerCase() ?? '';
           return name.endsWith('.pdf');
         }).toList();
 
         final matDocs = docs.where((doc) {
-          final name =
-              (doc.data() as Map<String, dynamic>)['fileName']
-                  ?.toString()
-                  .toLowerCase() ??
-              '';
+          final name = doc['fileName']?.toString().toLowerCase() ?? '';
           return name.endsWith('.mat') || name.endsWith('.csv') || name.endsWith('.txt');
         }).toList();
 
@@ -211,7 +226,7 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
     required IconData icon,
     required bool isExpanded,
     required VoidCallback onTap,
-    required List<QueryDocumentSnapshot> children,
+    required List<Map<String, dynamic>> children,
   }) {
     return Column(
       children: [
@@ -305,7 +320,7 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final data = children[index].data() as Map<String, dynamic>;
+                    final data = children[index];
                     return _buildCompactFileRow(context, data);
                   },
                 ),
@@ -325,7 +340,7 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
     final fileName = data['fileName']?.toString() ?? 'Unnamed File';
     final url = data['downloadUrl']?.toString() ?? '';
     final category = data['category']?.toString() ?? 'other';
-    final timestamp = data['createdAt'] as Timestamp?;
+    final rawTimestamp = data['createdAt'];
 
     final lowerName = fileName.toLowerCase();
     final isPdf = lowerName.endsWith('.pdf');
@@ -356,8 +371,14 @@ class _ProfileRecordsTabState extends ConsumerState<ProfileRecordsTab> {
         : Icons.insert_drive_file_rounded;
 
     String dateStr = 'N/A';
-    if (timestamp != null) {
-      final date = timestamp.toDate();
+    DateTime? date;
+    if (rawTimestamp is DateTime) {
+      date = rawTimestamp;
+    } else if (rawTimestamp is String) {
+      date = DateTime.tryParse(rawTimestamp);
+    }
+
+    if (date != null) {
       final months = [
         'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'

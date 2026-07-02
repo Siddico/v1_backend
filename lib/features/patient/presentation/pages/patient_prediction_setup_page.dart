@@ -5,16 +5,14 @@ import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:grad_imp_1/shared/presentation/widgets/app_bar_custom.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:grad_imp_1/core/theme/app_text_styles.dart';
 import 'package:grad_imp_1/shared/presentation/widgets/circular_loading_indicator.dart';
 // import 'package:grad_imp_1/shared/presentation/widgets/app_bar_custom.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:convert';
 import 'dart:async';
-
+import 'package:dio/dio.dart';
+import 'package:grad_imp_1/core/networking/api_constants.dart';
+import 'package:grad_imp_1/core/networking/dio_factory.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/stroke_prediction_logic.dart';
@@ -136,12 +134,11 @@ class _PatientPredictionSetupPageState
     final user = ref.read(authStateProvider).valueOrNull;
     if (user == null) return;
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('patient_profile')
-          .doc(user.id)
-          .get();
-      if (doc.exists && mounted) {
-        final data = doc.data()!;
+      final dio = await DioFactory.getDio();
+      final response = await dio.get(ApiConstants.patientProfile);
+      if ((response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300 && mounted) {
+        final resData = response.data['data'] as Map<String, dynamic>? ?? response.data as Map<String, dynamic>;
+        final data = resData['profile'] as Map<String, dynamic>? ?? resData;
         setState(() {
           if (data['gender'] != null) {
             final g = data['gender'].toString().toLowerCase().trim();
@@ -269,75 +266,63 @@ class _PatientPredictionSetupPageState
     final double glucose = double.tryParse(_glucoseController.text) ?? 0.0;
     final double bmi = double.tryParse(_bmiController.text) ?? 0.0;
 
-    final String huggingFaceApiUrl = dotenv.env['HUGGING_FACE_API_URL'] ?? '';
-
-    if (huggingFaceApiUrl.isEmpty) {
-      if (mounted) {
-        AppToast.show(
-          context,
-          'API URL is not configured in .env file'.tr(context),
-          type: AppToastType.error,
-          translate: false,
-        );
-      }
-      setState(() => _isLoading = false);
-      return;
-    }
-
     double risk = 0.0;
 
     try {
-      final response = await http
-          .post(
-            Uri.parse(huggingFaceApiUrl),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              "age": age.toInt(),
-              "gender": _normalizedGender,
-              "chest_pain": _chestPain ? 1 : 0,
-              "high_blood_pressure": _hypertension ? 1 : 0,
-              "irregular_heartbeat": _irregularHeartbeat ? 1 : 0,
-              "shortness_of_breath": _shortnessOfBreath ? 1 : 0,
-              "fatigue_weakness": _fatigueWeakness ? 1 : 0,
-              "dizziness": _dizziness ? 1 : 0,
-              "swelling_edema": _swellingEdema ? 1 : 0,
-              "neck_jaw_pain": _neckJawPain ? 1 : 0,
-              "excessive_sweating": _excessiveSweating ? 1 : 0,
-              "persistent_cough": _persistentCough ? 1 : 0,
-              "nausea_vomiting": _nauseaVomiting ? 1 : 0,
-              "chest_discomfort": _chestDiscomfort ? 1 : 0,
-              "cold_hands_feet": _coldHandsFeet ? 1 : 0,
-              "snoring_sleep_apnea": _snoringSleepApnea ? 1 : 0,
-              "anxiety_doom": _anxietyDoom ? 1 : 0,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
+      final dio = await DioFactory.getDio();
+      final response = await dio.post(
+        ApiConstants.patientQuestionnairePredict,
+        data: {
+          "age": age.toInt(),
+          "gender": _normalizedGender,
+          "chest_pain": _chestPain ? 1 : 0,
+          "high_blood_pressure": _hypertension ? 1 : 0,
+          "irregular_heartbeat": _irregularHeartbeat ? 1 : 0,
+          "shortness_of_breath": _shortnessOfBreath ? 1 : 0,
+          "fatigue_weakness": _fatigueWeakness ? 1 : 0,
+          "dizziness": _dizziness ? 1 : 0,
+          "swelling_edema": _swellingEdema ? 1 : 0,
+          "neck_jaw_pain": _neckJawPain ? 1 : 0,
+          "excessive_sweating": _excessiveSweating ? 1 : 0,
+          "persistent_cough": _persistentCough ? 1 : 0,
+          "nausea_vomiting": _nauseaVomiting ? 1 : 0,
+          "chest_discomfort": _chestDiscomfort ? 1 : 0,
+          "cold_hands_feet": _coldHandsFeet ? 1 : 0,
+          "snoring_sleep_apnea": _snoringSleepApnea ? 1 : 0,
+          "anxiety_doom": _anxietyDoom ? 1 : 0,
+        },
+      );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        risk = (data['stroke_risk_probability'] as num).toDouble();
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data['data']['prediction'];
+        if (data['score'] != null) {
+          final s = (data['score'] as num).toDouble();
+          risk = s > 1.0 ? s / 100.0 : s;
+        } else if (data['risk_score'] != null) {
+          risk = (data['risk_score'] as num).toDouble();
+        } else {
+          risk = 0.3;
+        }
         if (mounted) {
           AppToast.show(
             context,
             isArabic
-                ? 'نجاح! تم الاتصال بنموذج الذكاء الاصطناعي. الخطر: ${(risk * 100).toStringAsFixed(1)}%'
-                : 'Success! AI Model connected. Risk: ${(risk * 100).toStringAsFixed(1)}%',
+                ? 'نجاح! تم تقييم المخاطر بنجاح. الخطر: ${(risk * 100).toStringAsFixed(1)}%'
+                : 'Success! Assessment completed. Risk: ${(risk * 100).toStringAsFixed(1)}%',
             type: AppToastType.success,
             translate: false,
           );
         }
       } else {
-        throw Exception(
-          'Status: ${response.statusCode}, Body: ${response.body}',
-        );
+        throw Exception('Failed to get prediction from server.');
       }
-    } on TimeoutException {
+    } on DioException catch (e) {
       if (mounted) {
         AppToast.show(
           context,
           isArabic
-              ? 'انتهت مهلة الاتصال. يرجى التحقق من الإنترنت.'
-              : 'Connection timeout. Please check your internet connection.',
+              ? 'خطأ في الاتصال بالخادم: ${e.message}'
+              : 'Connection error: ${e.message}',
           type: AppToastType.error,
           translate: false,
         );
@@ -348,7 +333,7 @@ class _PatientPredictionSetupPageState
       if (mounted) {
         AppToast.show(
           context,
-          isArabic ? 'خطأ في نموذج الذكاء الاصطناعي: $e' : 'AI Model Error: $e',
+          isArabic ? 'خطأ في التقييم: $e' : 'Assessment Error: $e',
           type: AppToastType.error,
           translate: false,
         );
@@ -401,6 +386,31 @@ class _PatientPredictionSetupPageState
     });
 
     try {
+      final dio = await DioFactory.getDio();
+
+      await dio.post(
+        ApiConstants.patientQuestionnairePredict,
+        data: {
+          "age": double.tryParse(_ageController.text)?.toInt() ?? 0,
+          "gender": _normalizedGender,
+          "chest_pain": _chestPain ? 1 : 0,
+          "high_blood_pressure": _hypertension ? 1 : 0,
+          "irregular_heartbeat": _irregularHeartbeat ? 1 : 0,
+          "shortness_of_breath": _shortnessOfBreath ? 1 : 0,
+          "fatigue_weakness": _fatigueWeakness ? 1 : 0,
+          "dizziness": _dizziness ? 1 : 0,
+          "swelling_edema": _swellingEdema ? 1 : 0,
+          "neck_jaw_pain": _neckJawPain ? 1 : 0,
+          "excessive_sweating": _excessiveSweating ? 1 : 0,
+          "persistent_cough": _persistentCough ? 1 : 0,
+          "nausea_vomiting": _nauseaVomiting ? 1 : 0,
+          "chest_discomfort": _chestDiscomfort ? 1 : 0,
+          "cold_hands_feet": _coldHandsFeet ? 1 : 0,
+          "snoring_sleep_apnea": _snoringSleepApnea ? 1 : 0,
+          "anxiety_doom": _anxietyDoom ? 1 : 0,
+        },
+      );
+
       if (mounted) {
         AppToast.show(
           context,
@@ -409,6 +419,7 @@ class _PatientPredictionSetupPageState
         );
       }
 
+      ref.invalidate(authStateProvider);
       await ref.refresh(authStateProvider.future);
 
       if (mounted) {
@@ -1934,4 +1945,3 @@ class _PulsingHeartIconState extends State<_PulsingHeartIcon>
     );
   }
 }
-

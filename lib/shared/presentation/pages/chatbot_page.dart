@@ -4,9 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import 'package:dio/dio.dart';
-import '../../../core/networking/api_constants.dart';
-import '../../../core/networking/dio_factory.dart';
+import '../../data/datasources/chatbot_remote_datasource.dart';
 // Removed firebase_auth import
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -39,6 +37,7 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
   bool _isAiTyping = false;
   String? _attachedFileUrl;
   String? _attachedFileName;
+  // ignore: unused_field
   String? _attachedLocalFilePath;
   bool _isAttachedImage = false;
   // ignore: unused_field
@@ -58,20 +57,15 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
 
   Future<void> _loadSessionsAndSetStream() async {
     try {
-      final dio = await DioFactory.getDio();
-      final response = await dio.get(ApiConstants.chatbotSessions);
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        if (mounted) {
-          setState(() {
-            _chatSessions = List<Map<String, dynamic>>.from(
-              response.data['data']['sessions'] ?? [],
-            );
-          });
-          if (_chatSessions.isNotEmpty) {
-            _setSession(_chatSessions.first['id'].toString());
-          } else {
-            _startNewSession();
-          }
+      final sessions = await ChatbotRemoteDataSource.getSessions();
+      if (mounted) {
+        setState(() {
+          _chatSessions = sessions;
+        });
+        if (_chatSessions.isNotEmpty) {
+          _setSession(_chatSessions.first['id'].toString());
+        } else {
+          _startNewSession();
         }
       }
     } catch (e) {
@@ -104,28 +98,19 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
   Future<void> _fetchMessages({bool silent = false}) async {
     if (_currentSessionId == null) return;
     try {
-      final dio = await DioFactory.getDio();
-      final response = await dio.get(
-        '${ApiConstants.chatbotSessions}/$_currentSessionId/messages',
+      final newMessages = await ChatbotRemoteDataSource.getMessages(
+        _currentSessionId!,
       );
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        if (mounted) {
-          final newMessages = List<Map<String, dynamic>>.from(
-            response.data['data']['messages'] ?? [],
+      if (mounted) {
+        bool shouldScroll = newMessages.length > _currentMessages.length;
+        setState(() {
+          _currentMessages = newMessages;
+          _isLoadingMessages = false;
+        });
+        if (shouldScroll && !silent) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _scrollToBottom(),
           );
-          bool shouldScroll = false;
-          if (newMessages.length > _currentMessages.length) {
-            shouldScroll = true;
-          }
-          setState(() {
-            _currentMessages = newMessages;
-            _isLoadingMessages = false;
-          });
-          if (shouldScroll && !silent) {
-            WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _scrollToBottom(),
-            );
-          }
         }
       }
     } catch (e) {
@@ -319,10 +304,6 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
     });
     _scrollToBottom();
 
-    final fileUrl = _attachedFileUrl;
-    final fileName = _attachedFileName;
-    final isImage = _isAttachedImage;
-
     setState(() {
       _attachedFileUrl = null;
       _attachedFileName = null;
@@ -332,28 +313,19 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
     });
 
     try {
-      final dio = await DioFactory.getDio();
       if (_currentSessionId == null) {
-        final newSessionResp = await dio.post(
-          ApiConstants.chatbotSessions,
-          data: {'title': text.isNotEmpty ? text : 'New Chat'},
+        final newId = await ChatbotRemoteDataSource.createSession(
+          text.isNotEmpty ? text : 'New Chat',
         );
-        if (newSessionResp.statusCode == 200 &&
-            newSessionResp.data['success'] == true) {
-          _currentSessionId = newSessionResp.data['data']['session']['id']
-              .toString();
+        if (newId.isNotEmpty) {
+          _currentSessionId = newId;
           _loadSessionsAndSetStream(); // refresh sidebar
         }
       }
       if (_currentSessionId != null) {
-        await dio.post(
-          '${ApiConstants.chatbotSessions}/$_currentSessionId/messages',
-          data: {
-            'content': userMsgText,
-            'attachmentUrl': fileUrl,
-            'attachmentName': fileName,
-            'isImageAttachment': isImage,
-          },
+        await ChatbotRemoteDataSource.sendMessage(
+          _currentSessionId!,
+          userMsgText,
         );
         await _fetchMessages(silent: false);
       }
@@ -1035,16 +1007,11 @@ class _ChatbotPageState extends ConsumerState<ChatbotPage> {
 
   Future<void> _deleteChatSession(String sessionId, Color primaryColor) async {
     try {
-      final dio = await DioFactory.getDio();
-      final response = await dio.delete(
-        '${ApiConstants.chatbotSessions}/$sessionId',
-      );
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        if (_currentSessionId == sessionId) {
-          _startNewSession();
-        }
-        _loadSessionsAndSetStream();
+      await ChatbotRemoteDataSource.deleteSession(sessionId);
+      if (_currentSessionId == sessionId) {
+        _startNewSession();
       }
+      _loadSessionsAndSetStream();
     } catch (e) {
       debugPrint('Error deleting chat: $e');
     }

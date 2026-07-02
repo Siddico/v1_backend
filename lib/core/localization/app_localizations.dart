@@ -23,6 +23,24 @@ class AppLocalizations {
       'default_error': 'Something went wrong, try again later',
       'cache_error': 'Cache error, try again later',
       'no_internet_error': 'Please check your internet connection',
+      'Invalid email or password.': 'Invalid email or password.',
+      'Forbidden request, try again later': 'Forbidden request, try again later',
+      'User not found.': 'User not found.',
+      'Validation Error': 'Validation Error',
+      'Registration failed.': 'Registration failed.',
+      'Login failed.': 'Login failed.',
+      'Server error, try again later': 'Server error, try again later',
+      'Connection timeout, try again later': 'Connection timeout, try again later',
+      'Please check your internet connection': 'Please check your internet connection',
+      'Network error. Please try again.': 'Network error. Please try again.',
+      'An unexpected error occurred. Please try again.': 'An unexpected error occurred. Please try again.',
+      'Failed to send OTP.': 'Failed to send OTP.',
+      'Failed to verify OTP.': 'Failed to verify OTP.',
+      'Invalid or expired OTP code.': 'Invalid or expired OTP code.',
+      'Session expired. Please request a new OTP.': 'Session expired. Please request a new OTP.',
+      'Failed to reset password.': 'Failed to reset password.',
+      'The email has already been taken.': 'The email has already been taken.',
+      'The phone has already been taken.': 'The phone has already been taken.',
     },
     'ar': {
       // General/Global
@@ -835,11 +853,51 @@ class AppLocalizations {
       'default_error': 'حدث خطأ ما، حاول مرة أخرى',
       'cache_error': 'خطأ في الذاكرة المخبأة، حاول مرة أخرى',
       'no_internet_error': 'يرجى التحقق من اتصالك بالإنترنت',
+      'Forbidden request, try again later': 'غير مسموح بهذا الطلب، حاول مرة أخرى لاحقاً',
+      'User not found.': 'المستخدم غير موجود.',
+      'Validation Error': 'خطأ في التحقق من صحة البيانات.',
+      'Registration failed.': 'فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.',
+      'Login failed.': 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.',
+      'Server error, try again later': 'خطأ في الخادم، حاول مرة أخرى لاحقاً',
+      'Connection timeout, try again later': 'انتهت مهلة الاتصال، حاول مرة أخرى لاحقاً',
+      'Please check your internet connection': 'يرجى التحقق من اتصالك بالإنترنت',
+      'Network error. Please try again.': 'خطأ في الاتصال بالشبكة. يرجى المحاولة مرة أخرى.',
+      'An unexpected error occurred. Please try again.': 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.',
+      'Failed to send OTP.': 'فشل إرسال رمز التحقق.',
+      'Failed to verify OTP.': 'فشل التحقق من الرمز.',
+      'Invalid or expired OTP code.': 'رمز التحقق غير صالح أو منتهي الصلاحية.',
+      'Session expired. Please request a new OTP.': 'انتهت صلاحية الجلسة. يرجى طلب رمز تحقق جديد.',
+      'Failed to reset password.': 'فشل إعادة تعيين كلمة المرور.',
+      'The email has already been taken.': 'البريد الإلكتروني مسجل مسبقاً.',
+      'The phone has already been taken.': 'رقم الهاتف مسجل مسبقاً.',
     },
   };
 
   String translate(String key) {
-    return _localizedValues[locale.languageCode]?[key] ?? key;
+    final localized = _localizedValues[locale.languageCode]?[key];
+    if (localized != null) return localized;
+
+    if (locale.languageCode == 'ar') {
+      final lower = key.toLowerCase();
+      if (lower.contains('email has already been taken')) {
+        return 'البريد الإلكتروني مسجل مسبقاً.';
+      } else if (lower.contains('phone has already been taken')) {
+        return 'رقم الهاتف مسجل مسبقاً.';
+      } else if (lower.contains('invalid email or password') || lower.contains('invalid credentials') || lower.contains('unauthenticated')) {
+        return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+      } else if (lower.contains('password')) {
+        if (lower.contains('match')) return 'تأكيد كلمة المرور غير متطابق.';
+        if (lower.contains('least') || lower.contains('characters')) return 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.';
+      } else if (lower.contains('network') || lower.contains('connection')) {
+        return 'خطأ في الاتصال بالشبكة. يرجى المحاولة مرة أخرى.';
+      } else if (lower.contains('timeout')) {
+        return 'انتهت مهلة الاتصال، حاول مرة أخرى لاحقاً';
+      } else if (lower.contains('server error')) {
+        return 'خطأ في الخادم، حاول مرة أخرى لاحقاً';
+      }
+    }
+
+    return key;
   }
 }
 
@@ -866,3 +924,4 @@ extension LocalizationExtension on String {
     return AppLocalizations.of(context)?.translate(this) ?? this;
   }
 }
+

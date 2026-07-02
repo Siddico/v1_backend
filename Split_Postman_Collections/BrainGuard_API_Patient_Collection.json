@@ -1,0 +1,999 @@
+{
+    "info": {
+        "_postman_id": "c34a214a-8e97-4347-a2cc-c24f3536bd6b",
+        "name": "BrainGuard API - Patient",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "53087425",
+        "_collection_link": "https://go.postman.co/collection/53087425-c34a214a-8e97-4347-a2cc-c24f3536bd6b?source=collection_link"
+    },
+    "item": [
+        {
+            "name": "1. Profile Management",
+            "item": [
+                {
+                    "name": "Get Profile",
+                    "protocolProfileBehavior": {
+                        "disabledSystemHeaders": {
+                            "accept": true
+                        }
+                    },
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/patient/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "profile"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Profile",
+                    "protocolProfileBehavior": {
+                        "disabledSystemHeaders": {
+                            "content-type": true
+                        }
+                    },
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "full_name",
+                                    "value": "Belal Fergani",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "age",
+                                    "value": "25",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "weight",
+                                    "value": "75.5",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "phone",
+                                    "value": "01012345678",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "gender",
+                                    "value": "male",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "emergency_number",
+                                    "value": "01098765432",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "medical_history",
+                                    "value": "No chronic diseases",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "profile"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "Send as form-data, NOT JSON. Image field must be jpg/jpeg/png/webp.\r\nField names are: weight (not wight), image (not img)."
+                }
+            ]
+        },
+        {
+            "name": "2. QR Code & Pairing",
+            "item": [
+                {
+                    "name": "QR Scan",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"qr_data\": \"DOCTOR_3\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/qr",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "qr"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "Scan a doctor QR code. Format: DOCTOR_{doctor_profile_id}.\r\nResponse includes: doctor profile, connection_status (connected/pending/none).\r\nIf connection_status is 'none' → Flutter shows Send Request button."
+                }
+            ]
+        },
+        {
+            "name": "3. Health Metrics Data",
+            "item": [
+                {
+                    "name": "Add Health Data",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"heart_rate\": 150,\r\n    \"blood_pressure\": \"120/80\",\r\n    \"blood_glucose\": 90.0,\r\n    \"cholesterol\": 180.0,\r\n    \"spo2_level\": 20.5,\r\n    \"stability_index\": 0.95,\r\n    \"recorded_at\": \"2026-03-31T10:00:00Z\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/health-data",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "health-data"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Health Data",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/health-data",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "health-data"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "4. Biosignals (ECG & PPG)",
+            "item": [
+                {
+                    "name": "Upload Signal (ECG/PPG)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"signal_type\":\"ECG\",\"raw_data\":[0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899,-0.0,0.0899,0.1766,0.2571,0.3286,0.3892,0.4372,0.4722,0.4941,0.5038,0.503,0.4938,0.4789,0.4613,0.444,0.4301,0.4221,0.4224,0.4326,0.4535,0.4853,0.5273,0.5782,0.6358,0.6977,0.7608,0.822,0.8782,0.9263,0.9638,0.9886,0.9995,0.9959,0.9779,0.9465,0.9034,0.8509,0.7919,0.7293,0.6664,0.6063,0.5517,0.5051,0.468,0.4416,0.4262,0.4211,0.4252,0.4365,0.4524,0.4702,0.4869,0.4992,0.5046,0.5004,0.4847,0.4564,0.4148,0.3604,0.2941,0.2178,0.1339,0.0452,-0.0452,-0.1339,-0.2178,-0.2941,-0.3604,-0.4148,-0.4564,-0.4847,-0.5004,-0.5046,-0.4992,-0.4869,-0.4702,-0.4524,-0.4365,-0.4252,-0.4211,-0.4262,-0.4416,-0.468,-0.5051,-0.5517,-0.6063,-0.6664,-0.7293,-0.7919,-0.8509,-0.9034,-0.9465,-0.9779,-0.9959,-0.9995,-0.9886,-0.9638,-0.9263,-0.8782,-0.822,-0.7608,-0.6977,-0.6358,-0.5782,-0.5273,-0.4853,-0.4535,-0.4326,-0.4224,-0.4221,-0.4301,-0.444,-0.4613,-0.4789,-0.4938,-0.503,-0.5038,-0.4941,-0.4722,-0.4372,-0.3892,-0.3286,-0.2571,-0.1766,-0.0899],\"source\":\"wearable\",\"file_url\":\"https://medlineplus.gov/ency/imagepages/1135.htm\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/signals",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "signals"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Signals",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/signals",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "signals"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "5. Radiology & Scans",
+            "item": [
+                {
+                    "name": "Upload Radiology",
+                    "protocolProfileBehavior": {
+                        "disabledSystemHeaders": {
+                            "accept": true
+                        }
+                    },
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"upload_type\": \"mri\",\r\n    \"description\": \"Brain MRI scan\",\r\n    \"file_url\": \"https://example.com/mri_scan.jpg\",\r\n    \"uploaded_at\": \"2026-03-31T10:00:00Z\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/radiology",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "radiology"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "6. AI Stroke Risk Prediction",
+            "item": [
+                {
+                    "name": "Run Prediction (AI)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"predict_based_on_files\": false\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/predict",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "predict"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Questionnaire Stroke Risk Predict (EHR)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"age\": 55,\r\n    \"gender\": \"Male\",\r\n    \"chest_pain\": 1,\r\n    \"high_blood_pressure\": 1,\r\n    \"irregular_heartbeat\": 0,\r\n    \"shortness_of_breath\": 1,\r\n    \"fatigue_weakness\": 1,\r\n    \"dizziness\": 0,\r\n    \"swelling_edema\": 0,\r\n    \"neck_jaw_pain\": 0,\r\n    \"excessive_sweating\": 0,\r\n    \"persistent_cough\": 0,\r\n    \"nausea_vomiting\": 0,\r\n    \"chest_discomfort\": 1,\r\n    \"cold_hands_feet\": 0,\r\n    \"snoring_sleep_apnea\": 1,\r\n    \"anxiety_doom\": 0\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/questionnaire-predict",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "questionnaire-predict"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "EHR questionnaire-based stroke prediction using LightGBM model.\r\nNo PPG signal required. Uses EHR_AI_SERVICE_URL.\r\nReturns same prediction format as /patient/predict with prediction_type: AI_QUESTIONNAIRE."
+                },
+                {
+                    "name": "Get Predictions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/predictions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "predictions"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "7. Appointments Scheduling",
+            "item": [
+                {
+                    "name": "POST Create Appointment",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"doctor_id\": 3,\r\n    \"appointment_date\": \"2026-07-15 10:00:00\",\r\n    \"specialty\": \"Neurology\",\r\n    \"notes\": \"First consultation visit\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/appointments",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "appointments"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "Requires doctor to be on patient's list first.\r\nSteps: (1) Send relationship request, (2) Doctor accepts,\r\n(3) Then create appointment. Otherwise returns 'Doctor is not on your list'."
+                },
+                {
+                    "name": "GET Appointments (Patient)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/appointments",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "appointments"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Single Appointment",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/appointments/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "appointments",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Update Appointment",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"status\": \"cancelled\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/appointments/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "appointments",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "8. Medications Management",
+            "item": [
+                {
+                    "name": "POST Add Medication",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"name\": \"Aspirin\",\r\n    \"dosage\": \"100mg\",\r\n    \"frequency\": \"once daily\",\r\n    \"reminder_time\": \"08:00\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/medications",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "medications"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Medications",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/medications",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "medications"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Update Medication",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"name\": \"Aspirin\",\r\n    \"dosage\": \"150mg\",\r\n    \"is_active\": true\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/medications/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "medications",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE Medication",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/medications/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "medications",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "9. Doctor Live Chat",
+            "item": [
+                {
+                    "name": "Send Chat Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"receiver_id\": 11,\r\n    \"message\": \"Doctor, I have a question about my results.\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "chat"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Chats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "chat"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Mark All Chats as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/chat/read",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "chat",
+                                "read"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "10. AI Medical Chatbot",
+            "item": [
+                {
+                    "name": "POST Create Chatbot Session",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"title\": \"Questions about my stroke risk\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/chatbot/sessions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "chatbot",
+                                "sessions"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Chatbot Sessions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/chatbot/sessions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "chatbot",
+                                "sessions"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Send Chatbot Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"content\": \"What is stroke risk and how can I reduce it?\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/chatbot/sessions/{{chatbot_session_id}}/messages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "chatbot",
+                                "sessions",
+                                "{{chatbot_session_id}}",
+                                "messages"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "Use the session ID from POST /chatbot/sessions response.\r\nSet {{chatbot_session_id}} = the id returned when creating a session."
+                },
+                {
+                    "name": "GET Chatbot Messages",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/chatbot/sessions/{{chatbot_session_id}}/messages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "chatbot",
+                                "sessions",
+                                "{{chatbot_session_id}}",
+                                "messages"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "Use the session ID from POST /chatbot/sessions response.\r\nSet {{chatbot_session_id}} = the id returned when creating a session."
+                }
+            ]
+        },
+        {
+            "name": "11. Notifications Center",
+            "item": [
+                {
+                    "name": "Get Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/notifications",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "notifications"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PATCH Mark Notification as Read",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/notifications/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "notifications",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "This returns 'Notification not found' if no notifications exist yet.\r\nNotifications are created automatically when prediction risk_level is high.\r\nTest by running POST /patient/predict after uploading a PPG signal,\r\nand trigger high risk scenario to generate a notification."
+                },
+                {
+                    "name": "Mark Notification Read (Flutter alias)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/notifications/1/read",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "notifications",
+                                "1",
+                                "read"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "This returns 'Notification not found' if no notifications exist yet.\r\nNotifications are created automatically when prediction risk_level is high.\r\nTest by running POST /patient/predict after uploading a PPG signal,\r\nand trigger high risk scenario to generate a notification."
+                },
+                {
+                    "name": "DELETE Notification",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/notifications/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "notifications",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "This returns 'Notification not found' if no notifications exist yet.\r\nNotifications are created automatically when prediction risk_level is high.\r\nTest by running POST /patient/predict after uploading a PPG signal,\r\nand trigger high risk scenario to generate a notification."
+                }
+            ]
+        },
+        {
+            "name": "12. Medical Reports",
+            "item": [
+                {
+                    "name": "Get Reports",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/reports",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "reports"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "13. Emergency Recommendations",
+            "item": [
+                {
+                    "name": "Get Emergency Recommendations",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/emergency",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "emergency"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "14. Doctor Relationships",
+            "item": [
+                {
+                    "name": "POST Relationship Request",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"doctor_id\": 3,\r\n    \"message\": \"I would like you to follow my medical case.\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/patient/relationship-requests",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "relationship-requests"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Relationship Requests",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/relationship-requests",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "relationship-requests"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE Relationship Request",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/patient/relationship-requests/{{relationship_request_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "patient",
+                                "relationship-requests",
+                                "{{relationship_request_id}}"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "Use the id returned from POST /patient/relationship-requests response.\r\nSet {{relationship_request_id}} = the id from the create response."
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "token",
+            "value": ""
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "packages": [],
+                "requests": [],
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "packages": [],
+                "requests": [],
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ]
+}

@@ -203,6 +203,9 @@ class _WellnessPageState extends ConsumerState<WellnessPage> {
                                                   .tr(context)
                                             : 'Your stroke risk is elevated. Please monitor your health.'
                                                   .tr(context),
+                                        lastPredictionTime: authState
+                                            .valueOrNull
+                                            ?.lastPredictionTime,
                                       ),
                                     ),
                                   ),

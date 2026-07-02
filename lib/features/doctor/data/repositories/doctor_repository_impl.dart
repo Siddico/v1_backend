@@ -55,10 +55,9 @@ class DoctorRepositoryImpl implements DoctorRepository {
     final tasks = raw.whereType<Map>().map((item) {
       final iconCode = (item['iconCode'] as num?)?.toInt();
       return DoctorTaskEntity(
-        title: (item['title'] as String?) ?? 'Task',
-        description: (item['description'] as String?) ?? '',
-        time: (item['time'] as String?) ?? '--:--',
-        // Use a const-safe lookup so the release tree-shaker can analyse icons.
+        title: item['title']?.toString() ?? 'Task',
+        description: item['description']?.toString() ?? '',
+        time: item['time']?.toString() ?? '--:--',
         icon: _iconFromCode(iconCode),
       );
     }).toList();
@@ -66,10 +65,7 @@ class DoctorRepositoryImpl implements DoctorRepository {
     return tasks.isEmpty ? _defaultTasks : tasks;
   }
 
-  /// Maps a known Material icon codepoint to a constant [IconData].
-  /// Falls back to [Icons.fact_check_outlined] for any unknown code.
   static IconData _iconFromCode(int? code) {
-    // Add more entries here if remote data sends additional icon codes.
     const knownIcons = <int, IconData>{
       0xe1b4: Icons.fact_check_outlined,
       0xe63d: Icons.videocam_outlined,
@@ -105,10 +101,10 @@ class DoctorRepositoryImpl implements DoctorRepository {
       final imageIndex = i < fallbackImages.length ? i : fallbackImages.length - 1;
 
       stats.add(StatSummaryEntity(
-        title: (item['title'] as String?) ?? 'Stat',
-        value: (item['value'] as String?) ?? '0',
+        title: item['title']?.toString() ?? 'Stat',
+        value: item['value']?.toString() ?? '0',
         colors: fallbackColors[colorIndex],
-        image: (item['image'] as String?) ?? fallbackImages[imageIndex],
+        image: item['image']?.toString() ?? fallbackImages[imageIndex],
       ));
     }
     return stats.isEmpty ? _defaultStats : stats;
@@ -120,11 +116,11 @@ class DoctorRepositoryImpl implements DoctorRepository {
 
     return raw.whereType<Map>().map((item) {
       return PatientRowEntity(
-        id: (item['id'] as String?) ?? '-',
-        name: (item['name'] as String?) ?? 'Patient',
-        diagnosis: (item['diagnosis'] as String?) ?? 'N/A',
-        status: (item['status'] as String?) ?? 'Stable',
-        lastReview: (item['lastReview'] as String?) ?? '-',
+        id: item['id']?.toString() ?? '-',
+        name: item['full_name']?.toString() ?? item['name']?.toString() ?? 'Patient',
+        diagnosis: item['diagnosis']?.toString() ?? 'N/A',
+        status: item['status']?.toString() ?? 'Stable',
+        lastReview: item['lastReview']?.toString() ?? '-',
       );
     }).toList();
   }

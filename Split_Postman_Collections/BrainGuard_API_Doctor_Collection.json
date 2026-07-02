@@ -1,0 +1,674 @@
+{
+    "info": {
+        "_postman_id": "c34a214a-8e97-4347-a2cc-c24f3536bd6b",
+        "name": "BrainGuard API - Doctor",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "53087425",
+        "_collection_link": "https://go.postman.co/collection/53087425-c34a214a-8e97-4347-a2cc-c24f3536bd6b?source=collection_link"
+    },
+    "item": [
+        {
+            "name": "1. Doctor Profile",
+            "item": [
+                {
+                    "name": "Get Doctor Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "profile"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Doctor Profile",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"full_name\": \"Dr. Ahmed Mohamed\",\r\n    \"specialty\": \"Neurology\",\r\n    \"hospital\": \"Cairo University Hospital\",\r\n    \"years_of_experience\": 10,\r\n    \"phone\": \"01012345678\",\r\n    \"gender\": \"male\",\r\n    \"bio\": \"Expert in stroke prevention.\",\r\n    \"email\": \"dr.ahmed@hospital.com\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "profile"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "2. Doctors Directory (Public)",
+            "item": [
+                {
+                    "name": "GET All Doctors (Public)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctors",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctors"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Doctors by Specialty",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctors?specialty=Neurology",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctors"
+                            ],
+                            "query": [
+                                {
+                                    "key": "specialty",
+                                    "value": "Neurology"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "3. Patients Management",
+            "item": [
+                {
+                    "name": "Scan Patient QR (Doctor)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"qr_data\": \"PATIENT_12\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/scan-qr",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "scan-qr"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "description": "Doctor scans patient QR code. Returns patient profile and is_connected boolean."
+                },
+                {
+                    "name": "Add Patient",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"patient_id\": 11\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/patients",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "patients"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Patient List",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/patients",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "patients"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Single Patient for Doctor",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/patients/11",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "patients",
+                                "11"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "4. Patient Medical Data",
+            "item": [
+                {
+                    "name": "Add Medical Data",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"patient_id\": 11,\r\n    \"diagnosis\": \"Atrial Fibrillation\",\r\n    \"treatment_plan\": \"Anticoagulant therapy for 3 months\",\r\n    \"notes\": \"Monitor weekly. Avoid high sodium diet.\",\r\n    \"heart_rate\": 88.0,\r\n    \"blood_pressure\": \"130/85\",\r\n    \"blood_glucose\": 95.0,\r\n    \"cholesterol\": 200.0,\r\n    \"hrv\": 45.0\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/medical-data",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "medical-data"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Medical Data",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/medical-data",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "medical-data"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "5. Patient Lab Documents",
+            "item": [
+                {
+                    "name": "Upload Lab Document",
+                    "protocolProfileBehavior": {
+                        "disabledSystemHeaders": {
+                            "accept": true
+                        }
+                    },
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"patient_id\": 11,\r\n    \"lab_name\": \"Cairo Lab\",\r\n    \"document_type\": \"blood_test\",\r\n    \"description\": \"CBC and lipid panel results\",\r\n    \"file_url\": \"https://storage.example.com/lab/cbc_results.pdf\",\r\n    \"uploaded_at\": \"2026-06-07T10:00:00Z\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/lab-documents",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "lab-documents"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Lab Documents",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/lab-documents",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "lab-documents"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "6. Patient Radiology Imaging",
+            "item": [
+                {
+                    "name": "Upload Radiology Imaging",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"patient_id\": 11,\r\n    \"imaging_type\": \"mri\",\r\n    \"description\": \"Brain MRI scan — follow up after stroke risk alert\",\r\n    \"file_url\": \"https://storage.example.com/radiology/brain_mri_001.jpg\",\r\n    \"uploaded_at\": \"2026-06-07T10:00:00Z\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/radiology",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "radiology"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Radiology Imaging",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/radiology",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "radiology"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "7. Appointments Management",
+            "item": [
+                {
+                    "name": "GET Appointments",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/appointments",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "appointments"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Update Appointment",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"status\": \"completed\",\r\n    \"notes\": \"Patient is recovering well.\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/appointments/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "appointments",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "8. Medical Alerts",
+            "item": [
+                {
+                    "name": "Get Doctor Alerts",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/alerts",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "alerts"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Alert Status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"is_read\": true\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/alerts/{{alert_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "alerts",
+                                "{{alert_id}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "9. Clinical Follow-ups",
+            "item": [
+                {
+                    "name": "Add Follow-up",
+                    "protocolProfileBehavior": {
+                        "disabledSystemHeaders": {
+                            "accept": true
+                        }
+                    },
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"patient_id\": 11,\r\n    \"suggestion_text\": \"Patient needs to reduce sodium intake\",\r\n    \"notes\": \"Monitor blood pressure weekly\",\r\n    \"next_visit\": \"2026-07-15\",\r\n    \"follow_up_type\": \"routine\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/follow-up",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "follow-up"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Follow-ups",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/follow-up",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "follow-up"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "10. Patient Live Chat",
+            "item": [
+                {
+                    "name": "Send Chat Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"receiver_id\": 11,\r\n    \"message\": \"Please take your medication regularly\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "chat"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Chats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "chat"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "11. Patient Relationships",
+            "item": [
+                {
+                    "name": "GET Relationship Requests",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/doctor/relationship-requests",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "relationship-requests"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "PUT Respond to Relationship Request",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"status\": \"accepted\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/doctor/relationship-requests/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "doctor",
+                                "relationship-requests",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "token",
+            "value": ""
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "packages": [],
+                "requests": [],
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "packages": [],
+                "requests": [],
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ]
+}

@@ -4,9 +4,28 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../features/wellness/domain/entities/health_data_entity.dart';
 import 'package:grad_imp_1/features/patient/domain/entities/prediction_result_entity.dart';
+import 'package:grad_imp_1/core/networking/api_constants.dart';
+import 'package:grad_imp_1/core/networking/api_response_parser.dart';
+import 'package:grad_imp_1/core/networking/dio_factory.dart';
 
 class PDFReportService {
   PDFReportService._();
+
+  static Future<List<Map<String, dynamic>>> fetchReports() async {
+    try {
+      final dio = await DioFactory.getDio();
+      final response = await dio.get(ApiConstants.patientReports);
+      if (response.statusCode == 200) {
+        final list = ApiResponseParser.extractList(
+          response.data is Map ? response.data['data'] : response.data,
+        );
+        return list.whereType<Map<String, dynamic>>().toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
 
   static Future<void> generateAndShareReport({
     required String userName,

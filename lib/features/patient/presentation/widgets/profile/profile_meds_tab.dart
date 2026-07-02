@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -11,7 +10,6 @@ import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/enums/user_role.dart';
 import '../../../../../core/services/local_notification_service.dart';
 import '../../../../../shared/presentation/widgets/app_toast.dart';
-import '../../../../../shared/presentation/widgets/circular_loading_indicator.dart';
 
 import '../../../../../shared/data/datasources/medication_remote_datasource.dart';
 
@@ -52,6 +50,8 @@ class _ProfileMedsTabState extends State<ProfileMedsTab> {
           return {
             'id': e['id']?.toString() ?? '',
             'name': e['name'] ?? 'Unknown',
+            'dosage': e['dosage'] ?? '',
+            'frequency': e['frequency'] ?? '',
             'hour': hour,
             'minute': minute,
             'imageUrl': e['image_url'], // Optional
@@ -97,6 +97,12 @@ class _ProfileMedsTabState extends State<ProfileMedsTab> {
 
     final TextEditingController nameController = TextEditingController(
       text: data?['name'] ?? '',
+    );
+    final TextEditingController dosageController = TextEditingController(
+      text: data?['dosage'] ?? '',
+    );
+    final TextEditingController frequencyController = TextEditingController(
+      text: data?['frequency'] ?? 'Daily',
     );
     TimeOfDay selectedTime = isEdit
         ? TimeOfDay(hour: data?['hour'] ?? 8, minute: data?['minute'] ?? 0)
@@ -157,15 +163,14 @@ class _ProfileMedsTabState extends State<ProfileMedsTab> {
               setSheetState(() => _isSaving = true);
 
               final uid = 'mock_uid';
-              String? finalImageUrl = currentImageUrl;
 
+              String? uploadedUrl = currentImageUrl;
               if (localImageFile != null) {
                 setSheetState(() => isUploadingImage = true);
-                final uploadedUrl = await _uploadImageToCloudinary(
+                uploadedUrl = await _uploadImageToCloudinary(
                   localImageFile!,
                   uid,
                 );
-                if (uploadedUrl != null) finalImageUrl = uploadedUrl;
                 setSheetState(() => isUploadingImage = false);
               }
 
@@ -173,50 +178,57 @@ class _ProfileMedsTabState extends State<ProfileMedsTab> {
                   data?['notificationId'] ??
                   DateTime.now().millisecondsSinceEpoch.hashCode;
 
-              final Map<String, dynamic> payload = {
-                'id': isEdit
-                    ? medDoc!['id']
-                    : Random().nextInt(10000).toString(),
-                'name': name,
-                'hour': selectedTime.hour,
-                'minute': selectedTime.minute,
-                'imageUrl': finalImageUrl,
-                'notificationId': notificationId,
-              };
-
               try {
-                final reminderStr = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
-                
+                final reminderStr =
+                    '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+
                 if (isEdit) {
                   await MedicationRemoteDataSource.updateMedication(
-                    id: int.parse(medDoc!['id']),
+                    id: int.parse(data?['id']?.toString() ?? '1'),
                     name: name,
-                    dosage: '1', // default for now
+                    dosage: dosageController.text.trim().isEmpty
+                        ? '1'
+                        : dosageController.text.trim(),
+                    frequency: frequencyController.text.trim().isEmpty
+                        ? 'Daily'
+                        : frequencyController.text.trim(),
+                    reminderTime: reminderStr,
                     isActive: true,
+                    imageUrl: uploadedUrl,
                   );
                 } else {
                   await MedicationRemoteDataSource.addMedication(
                     name: name,
-                    dosage: '1',
-                    frequency: 'Daily',
+                    dosage: dosageController.text.trim().isEmpty
+                        ? '1'
+                        : dosageController.text.trim(),
+                    frequency: frequencyController.text.trim().isEmpty
+                        ? 'Daily'
+                        : frequencyController.text.trim(),
                     reminderTime: reminderStr,
+                    imageUrl: uploadedUrl,
                   );
                 }
 
                 await _fetchMedications(); // Refresh data
 
-                await LocalNotificationService.instance
-                    .scheduleDailyNotification(
-                      id: notificationId,
-                      title: isArabic ? 'موعد دواء' : 'Medication Time',
-                      // ignore: use_build_context_synchronously
-                      body: '${'Time to take your medication:'.tr(ctx)} $name',
-                      firestoreTitle: 'Medication Time',
-                      firestoreBody: 'Time to take your medication: $name',
-                      hour: selectedTime.hour,
-                      minute: selectedTime.minute,
-                      payload: '{"type": "medication"}',
-                    );
+                try {
+                  await LocalNotificationService.instance
+                      .scheduleDailyNotification(
+                        id: notificationId,
+                        title: isArabic ? 'موعد دواء' : 'Medication Time',
+                        // ignore: use_build_context_synchronously
+                        body:
+                            '${'Time to take your medication:'.tr(ctx)} $name',
+                        firestoreTitle: 'Medication Time',
+                        firestoreBody: 'Time to take your medication: $name',
+                        hour: selectedTime.hour,
+                        minute: selectedTime.minute,
+                        payload: '{"type": "medication"}',
+                      );
+                } catch (e) {
+                  debugPrint('Could not schedule local notification: $e');
+                }
 
                 if (mounted) {
                   // ignore: use_build_context_synchronously
@@ -254,336 +266,448 @@ class _ProfileMedsTabState extends State<ProfileMedsTab> {
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Drag handle
-                    Container(
-                      margin: const EdgeInsets.only(top: 12, bottom: 4),
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    // Header gradient banner
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0FB39E), Color(0xFF0A8F7E)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Drag handle
+                      Container(
+                        margin: const EdgeInsets.only(top: 12, bottom: 4),
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        borderRadius: BorderRadius.circular(18),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.medication_rounded,
-                              color: Colors.white,
-                              size: 26,
-                            ),
+                      // Header gradient banner
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0FB39E), Color(0xFF0A8F7E)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
                           ),
-                          const SizedBox(width: 14),
-                          Text(
-                            isEdit
-                                ? 'Edit Medication'.tr(ctx)
-                                : 'Add Medication'.tr(ctx),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: font,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Form fields
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Medication name field
-                          TextField(
-                            controller: nameController,
-                            style: TextStyle(
-                              fontFamily: font,
-                              fontSize: 14,
-                              color: AppColors.neutral900,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Medication Name'.tr(ctx),
-                              labelStyle: TextStyle(
-                                color: AppColors.tealP,
-                                fontFamily: font,
-                                fontSize: 13,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.medical_information_outlined,
-                                color: AppColors.tealP,
-                                size: 20,
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF3FAFB),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.tealP,
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.border,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Time selector
-                          GestureDetector(
-                            onTap: () async {
-                              final TimeOfDay? time = await showTimePicker(
-                                context: ctx,
-                                initialTime: selectedTime,
-                                builder: (context, child) {
-                                  return Theme(
-                                    data: Theme.of(context).copyWith(
-                                      colorScheme: const ColorScheme.light(
-                                        primary: AppColors.tealP,
-                                      ),
-                                    ),
-                                    child: child!,
-                                  );
-                                },
-                              );
-                              if (time != null) {
-                                setSheetState(() => selectedTime = time);
-                              }
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF3FAFB),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: AppColors.border),
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
                               ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.access_time_rounded,
-                                    color: AppColors.tealP,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'Dose Time:'.tr(ctx),
-                                      style: TextStyle(
-                                        color: AppColors.tealP,
-                                        fontFamily: font,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.tealP,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      formatTimeOfDay(selectedTime),
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: font,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              child: const Icon(
+                                Icons.medication_rounded,
+                                color: Colors.white,
+                                size: 26,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
+                            const SizedBox(width: 14),
+                            Text(
+                              isEdit
+                                  ? 'Edit Medication'.tr(ctx)
+                                  : 'Add Medication'.tr(ctx),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: font,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                          // Photo section
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Medication Photo (Optional)'.tr(ctx),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                    fontFamily: font,
+                      // Form fields
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Medication name field
+                            TextField(
+                              controller: nameController,
+                              style: TextStyle(
+                                fontFamily: font,
+                                fontSize: 14,
+                                color: AppColors.neutral900,
+                              ),
+                              decoration: InputDecoration(
+                                labelText: 'Medication Name'.tr(ctx),
+                                labelStyle: TextStyle(
+                                  color: AppColors.tealP,
+                                  fontFamily: font,
+                                  fontSize: 13,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.medical_information_outlined,
+                                  color: AppColors.tealP,
+                                  size: 20,
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xFFF3FAFB),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(
+                                    color: AppColors.tealP,
+                                    width: 2,
                                   ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(
+                                    color: AppColors.border,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              // Image preview
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: localImageFile != null
-                                    ? Image.file(
-                                        localImageFile!,
-                                        width: 56,
-                                        height: 56,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : currentImageUrl != null
-                                    ? Image.network(
-                                        currentImageUrl,
-                                        width: 56,
-                                        height: 56,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Container(
-                                        width: 56,
-                                        height: 56,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.tealSurface,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.medication_rounded,
-                                          color: AppColors.tealP,
-                                          size: 28,
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Dosage field
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: dosageController,
+                              style: TextStyle(
+                                fontFamily: font,
+                                fontSize: 14,
+                                color: AppColors.neutral900,
+                              ),
+                              decoration: InputDecoration(
+                                labelText: 'Dosage'.tr(ctx),
+                                labelStyle: TextStyle(
+                                  color: AppColors.tealP,
+                                  fontFamily: font,
+                                  fontSize: 13,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.monitor_weight_outlined,
+                                  color: AppColors.tealP,
+                                  size: 20,
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xFFF3FAFB),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(
+                                    color: AppColors.tealP,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(
+                                    color: AppColors.border,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Frequency field
+                            TextField(
+                              controller: frequencyController,
+                              style: TextStyle(
+                                fontFamily: font,
+                                fontSize: 14,
+                                color: AppColors.neutral900,
+                              ),
+                              decoration: InputDecoration(
+                                labelText: 'Frequency'.tr(ctx),
+                                labelStyle: TextStyle(
+                                  color: AppColors.tealP,
+                                  fontFamily: font,
+                                  fontSize: 13,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.repeat_rounded,
+                                  color: AppColors.tealP,
+                                  size: 20,
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xFFF3FAFB),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(
+                                    color: AppColors.tealP,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(
+                                    color: AppColors.border,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Time selector
+                            GestureDetector(
+                              onTap: () async {
+                                final TimeOfDay? time = await showTimePicker(
+                                  context: ctx,
+                                  initialTime: selectedTime,
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: Theme.of(context).copyWith(
+                                        colorScheme: const ColorScheme.light(
+                                          primary: AppColors.tealP,
                                         ),
                                       ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Pick photo buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _PhotoPickButton(
-                                  icon: Icons.camera_alt_outlined,
-                                  label: 'Camera'.tr(ctx),
-                                  font: font,
-                                  onTap: () => pickImage(ImageSource.camera),
+                                      child: child!,
+                                    );
+                                  },
+                                );
+                                if (time != null) {
+                                  setSheetState(() => selectedTime = time);
+                                }
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3FAFB),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.access_time_rounded,
+                                      color: AppColors.tealP,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Dose Time:'.tr(ctx),
+                                        style: TextStyle(
+                                          color: AppColors.tealP,
+                                          fontFamily: font,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.tealP,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        formatTimeOfDay(selectedTime),
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: font,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _PhotoPickButton(
-                                  icon: Icons.photo_library_outlined,
-                                  label: 'Gallery'.tr(ctx),
-                                  font: font,
-                                  onTap: () => pickImage(ImageSource.gallery),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
+                            ),
+                            const SizedBox(height: 16),
 
-                          // Action buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _isSaving
-                                      ? null
-                                      : () => Navigator.of(sheetContext).pop(),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    side: const BorderSide(
-                                      color: AppColors.border,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                  ),
+                            // Photo section
+                            Row(
+                              children: [
+                                Expanded(
                                   child: Text(
-                                    'Cancel'.tr(ctx),
+                                    'Medication Photo (Optional)'.tr(ctx),
                                     style: TextStyle(
+                                      fontSize: 12,
                                       color: AppColors.textSecondary,
                                       fontFamily: font,
-                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 2,
-                                child: ElevatedButton(
-                                  onPressed: _isSaving ? null : onSave,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.tealP,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    elevation: 2,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                  ),
-                                  child: _isSaving || isUploadingImage
-                                      ? const SizedBox(
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
+                                const SizedBox(width: 8),
+                                // Image preview
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: localImageFile != null
+                                      ? Image.file(
+                                          localImageFile!,
+                                          width: 56,
+                                          height: 56,
+                                          fit: BoxFit.cover,
                                         )
-                                      : Text(
-                                          'Save'.tr(ctx),
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontFamily: font,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
+                                      : currentImageUrl != null &&
+                                            currentImageUrl
+                                                .toString()
+                                                .isNotEmpty
+                                      ? Image.network(
+                                          currentImageUrl,
+                                          width: 56,
+                                          height: 56,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (
+                                                context,
+                                                error,
+                                                stackTrace,
+                                              ) => Container(
+                                                width: 56,
+                                                height: 56,
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.tealSurface,
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.medication_rounded,
+                                                  color: AppColors.tealP,
+                                                  size: 28,
+                                                ),
+                                              ),
+                                        )
+                                      : Container(
+                                          width: 56,
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.tealSurface,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.medication_rounded,
+                                            color: AppColors.tealP,
+                                            size: 28,
                                           ),
                                         ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                        ],
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Pick photo buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _PhotoPickButton(
+                                    icon: Icons.camera_alt_outlined,
+                                    label: 'Camera'.tr(ctx),
+                                    font: font,
+                                    onTap: () => pickImage(ImageSource.camera),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _PhotoPickButton(
+                                    icon: Icons.photo_library_outlined,
+                                    label: 'Gallery'.tr(ctx),
+                                    font: font,
+                                    onTap: () => pickImage(ImageSource.gallery),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Action buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: _isSaving
+                                        ? null
+                                        : () =>
+                                              Navigator.of(sheetContext).pop(),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      side: const BorderSide(
+                                        color: AppColors.border,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Cancel'.tr(ctx),
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontFamily: font,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  flex: 2,
+                                  child: ElevatedButton(
+                                    onPressed: _isSaving ? null : onSave,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.tealP,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    child: _isSaving || isUploadingImage
+                                        ? const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Text(
+                                            'Save'.tr(ctx),
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontFamily: font,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -594,9 +718,9 @@ class _ProfileMedsTabState extends State<ProfileMedsTab> {
   }
 
   Future<void> _deleteMedication(Map<String, dynamic> medDoc) async {
-    final Map<String, dynamic>? data = medDoc;
-    final int? notificationId = data?['notificationId'];
-    final String name = data?['name'] ?? '';
+    final Map<String, dynamic> data = medDoc;
+    final int? notificationId = data['notificationId'];
+    final String name = data['name'] ?? '';
     final isArabic = AppTextStyles.isArabic;
     final font = isArabic ? 'Cairo' : 'Poppins';
 
@@ -676,7 +800,7 @@ class _ProfileMedsTabState extends State<ProfileMedsTab> {
       if (medId != 0) {
         await MedicationRemoteDataSource.deleteMedication(medId);
       }
-      
+
       setState(() {
         _meds.removeWhere((m) => m['id'] == medDoc['id']);
       });
@@ -794,6 +918,165 @@ class _ProfileMedsTabState extends State<ProfileMedsTab> {
                 ),
               ],
             ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _meds.length,
+            itemBuilder: (context, index) {
+              final med = _meds[index];
+              final timeStr = TimeOfDay(
+                hour: med['hour'],
+                minute: med['minute'],
+              ).format(context);
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.neutral300.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: AppColors.tealBorderLight),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading:
+                      med['imageUrl'] != null &&
+                          med['imageUrl'].toString().isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            med['imageUrl'],
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.tealSurface,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.medication_rounded,
+                                    color: AppColors.tealP,
+                                  ),
+                                ),
+                          ),
+                        )
+                      : Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.tealSurface,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.medication_rounded,
+                            color: AppColors.tealP,
+                          ),
+                        ),
+                  title: Text(
+                    med['name'],
+                    style: TextStyle(
+                      fontFamily: font,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppColors.neutral900,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.monitor_weight_outlined,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${med['dosage']}',
+                            style: TextStyle(
+                              fontFamily: font,
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Icon(
+                            Icons.repeat_rounded,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${med['frequency']}',
+                            style: TextStyle(
+                              fontFamily: font,
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time_rounded,
+                            size: 14,
+                            color: AppColors.tealP,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            timeStr,
+                            style: TextStyle(
+                              fontFamily: font,
+                              fontSize: 12,
+                              color: AppColors.tealP,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.edit_outlined,
+                          color: AppColors.tealP,
+                        ),
+                        onPressed: () => _showAddEditBottomSheet(medDoc: med),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                        onPressed: () => _deleteMedication(med),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
       ],
     );

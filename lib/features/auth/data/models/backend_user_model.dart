@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/enums/gender.dart';
 import '../../../../core/enums/user_role.dart';
 import '../../../../shared/domain/entities/user_entity.dart';
@@ -82,12 +81,8 @@ class BackendUserModel {
     final rawLastPredTime =
         json['last_prediction_time'] ?? patientProfile?['last_prediction_time'];
     DateTime? lastPredictionTime;
-    if (rawLastPredTime != null) {
-      if (rawLastPredTime is String) {
-        lastPredictionTime = DateTime.tryParse(rawLastPredTime);
-      } else if (rawLastPredTime is Timestamp) {
-        lastPredictionTime = rawLastPredTime.toDate();
-      }
+    if (rawLastPredTime != null && rawLastPredTime is String) {
+      lastPredictionTime = DateTime.tryParse(rawLastPredTime);
     }
 
     return BackendUserModel(

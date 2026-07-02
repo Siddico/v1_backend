@@ -7,7 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../features/auth/presentation/controllers/auth_providers.dart';
 import 'package:grad_imp_1/core/networking/api_constants.dart';
 import 'package:grad_imp_1/core/networking/dio_factory.dart';
-import '../../../../core/services/profile_storage_service.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
+import 'package:dio/dio.dart';
 import '../../../../shared/ui/toast_service.dart';
 
 /// Widget for doctors to view and edit their profile picture.
@@ -53,19 +54,27 @@ class _DoctorProfilePictureState extends ConsumerState<DoctorProfilePicture> {
     setState(() => _isLoading = true);
     ToastService.showInfo('Uploading photo...');
     try {
-      final uid = ref.read(authStateProvider).valueOrNull?.id ?? 'doctor';
-      final url = await ProfileStorageService().uploadProfileImage(
-        uid: uid,
-        imageFile: File(xFile.path),
-      );
-
       final dio = await DioFactory.getDio();
-      await dio.put(
+      final token = await TokenStorage.getToken();
+      
+      final formData = FormData.fromMap({
+        '_method': 'PUT',
+        'image': await MultipartFile.fromFile(xFile.path, filename: xFile.name),
+      });
+
+      final response = await dio.post(
         ApiConstants.doctorProfile,
-        data: {'photo_url': url, 'image': url},
+        data: formData,
+        options: Options(headers: {
+           if (token != null) 'Authorization': 'Bearer $token',
+           'Accept': 'application/json',
+        }),
       );
 
-      setState(() => _photoUrl = url);
+      final newUrl = response.data['data']['photo_url'] ?? response.data['data']['image'];
+      if (newUrl != null) {
+        setState(() => _photoUrl = newUrl);
+      }
       ToastService.showSuccess('Photo updated');
     } catch (e) {
       ToastService.showError('Upload failed: $e');

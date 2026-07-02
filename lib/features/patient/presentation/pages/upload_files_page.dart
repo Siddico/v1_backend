@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:grad_imp_1/core/localization/app_localizations.dart';
 import 'dart:async';
+import 'package:dio/dio.dart';
+import 'package:grad_imp_1/core/networking/api_constants.dart';
+import 'package:grad_imp_1/core/networking/dio_factory.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -246,7 +250,7 @@ class _UploadFilesPageState extends ConsumerState<UploadFilesPage> {
         files: _step3RawFiles,
       );
 
-      // Save the .mat files to Firebase/Cloudinary so the doctor can view them
+      // Save files to Cloudinary and backend API so the doctor can view them
       await uploadNotifier.uploadCategoryFiles(
         category: 'ppg_ai_signals',
         files: _step4RawFiles,
@@ -260,11 +264,31 @@ class _UploadFilesPageState extends ConsumerState<UploadFilesPage> {
         final data = result['data'];
         if (data != null && data['risk_score'] != null) {
           final riskScore = (data['risk_score'] as num).toDouble();
+          
+          final dio = await DioFactory.getDio();
+          final token = await TokenStorage.getToken();
+          await dio.post(
+            ApiConstants.patientPredictions,
+            data: {
+              'model_version': 'v2',
+              'stroke_risk_probability': riskScore / 100.0,
+              'result_label': riskScore > 60 ? 'High Risk' : (riskScore > 30 ? 'Medium Risk' : 'Low Risk'),
+              'input_data': {'file_name': file.name},
+            },
+            options: Options(headers: {
+              if (token != null) 'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            }),
+          );
+
           if (riskScore > 60) {
             isCriticalFound = true;
           }
         }
       }
+
+      ref.invalidate(authStateProvider);
+      await ref.read(authStateProvider.future);
 
       final authState = ref.read(authStateProvider);
       final userId = authState.valueOrNull?.id;

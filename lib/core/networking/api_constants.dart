@@ -16,6 +16,7 @@ class ApiConstants {
   static const String patientHealthData = '/patient/health-data';
   static const String patientSignals = '/patient/signals';
   static const String patientPredict = '/patient/predict';
+  static const String patientQuestionnairePredict = '/patient/questionnaire-predict';
   static const String medications = '/patient/medications';
   static const String chatbotSessions = '/patient/chatbot/sessions';
   static const String patientPredictions = '/patient/predictions';
@@ -23,8 +24,11 @@ class ApiConstants {
   static const String patientReports = '/patient/reports';
   static const String patientEmergency = '/patient/emergency';
   static const String patientChat = '/patient/chat';
+  static const String patientChatRead = '/patient/chat/read';
   static const String patientRadiology = '/patient/radiology';
   static const String patientQr = '/patient/qr';
+  static const String patientAppointments = '/patient/appointments';
+  static const String patientRelationshipRequests = '/patient/relationship-requests';
 
   // Doctor
   static const String doctorProfile = '/doctor/profile';
@@ -35,5 +39,8 @@ class ApiConstants {
   static const String doctorLabDocuments = '/doctor/lab-documents';
   static const String doctorRadiology = '/doctor/radiology';
   static const String doctorChat = '/doctor/chat';
+  static const String doctorChatRead = '/doctor/chat/read';
   static const String doctorAppointments = '/doctor/appointments';
+  static const String doctorRelationshipRequests = '/doctor/relationship-requests';
+  static const String doctorScanQr = '/doctor/scan-qr';
 }

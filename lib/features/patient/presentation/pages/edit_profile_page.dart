@@ -8,17 +8,14 @@ import 'package:grad_imp_1/shared/presentation/widgets/circular_loading_indicato
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../../core/enums/gender.dart';
-import '../../../../../core/constants/app_images.dart';
-import '../../../../../core/services/profile_storage_service.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/controllers/auth_providers.dart';
 import '../../../../shared/ui/toast_service.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/app_text_styles.dart';
 
 /// Full-featured patient edit-profile page.
-/// Supports changing: display name, phone, gender, date-of-birth, and profile photo.
-/// All changes are saved to Firestore and a QR code JSON is stored/updated.
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
 
@@ -31,6 +28,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _dobCtrl = TextEditingController();
+  final _ageCtrl = TextEditingController();
+  final _weightCtrl = TextEditingController();
+  final _emergencyCtrl = TextEditingController();
+  final _medicalHistoryCtrl = TextEditingController();
 
   Gender? _selectedGender;
   File? _selectedImage;
@@ -49,23 +50,41 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       final response = await dio.get(ApiConstants.patientProfile);
       
       if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300 && mounted) {
-        final data = response.data['data'];
+        final rawData = response.data['data'] as Map<String, dynamic>? ?? {};
+        final data = rawData['profile'] as Map<String, dynamic>? ??
+            rawData['patient_profile'] as Map<String, dynamic>? ??
+            rawData;
+
         setState(() {
           _nameCtrl.text =
               data['full_name']?.toString() ?? data['fullName']?.toString() ?? data['name']?.toString() ?? '';
           _phoneCtrl.text = data['phone']?.toString() ?? '';
           
-          // Use age to calculate approximate dob if date_of_birth is missing
-          if (data['date_of_birth'] != null) {
-            _dobCtrl.text = data['date_of_birth'].toString();
-          } else if (data['age'] != null) {
-            final age = int.tryParse(data['age'].toString()) ?? 0;
-            if (age > 0) {
-              _dobCtrl.text = '${DateTime.now().year - age}-01-01';
+          if (data['age'] != null && data['age'].toString() != '0') {
+            _ageCtrl.text = data['age'].toString();
+            final ageVal = int.tryParse(data['age'].toString()) ?? 0;
+            if (ageVal > 0) {
+              _dobCtrl.text = '${DateTime.now().year - ageVal}-01-01';
             }
           }
+          if (data['date_of_birth'] != null && data['date_of_birth'].toString().isNotEmpty && data['date_of_birth'].toString() != 'null') {
+            _dobCtrl.text = data['date_of_birth'].toString();
+          }
+
+          if (data['weight'] != null && data['weight'].toString() != 'null') {
+            _weightCtrl.text = data['weight'].toString();
+          }
+          if (data['emergency_number'] != null && data['emergency_number'].toString() != 'null') {
+            _emergencyCtrl.text = data['emergency_number'].toString();
+          }
+          if (data['medical_history'] != null && data['medical_history'].toString() != 'null') {
+            _medicalHistoryCtrl.text = data['medical_history'].toString();
+          }
           
-          _existingPhotoUrl = data['photo_url']?.toString() ?? data['image']?.toString();
+          _existingPhotoUrl = rawData['image_url']?.toString() ??
+              data['image_url']?.toString() ??
+              data['photo_url']?.toString() ??
+              data['image']?.toString();
           
           final genderStr = data['gender']?.toString();
           if (genderStr != null) {
@@ -77,9 +96,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         });
       }
     } catch (e) {
-      if (mounted)
-        // ignore: curly_braces_in_flow_control_structures
+      if (mounted) {
         ToastService.showError('Failed to load profile data.'.tr(context));
+      }
     }
   }
 
@@ -125,37 +144,52 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     ToastService.showInfo('Saving your profile…'.tr(context));
 
     try {
-      // Upload photo if changed.
-      String? newPhotoUrl;
-      if (_selectedImage != null) {
-        newPhotoUrl = await ProfileStorageService().uploadProfileImage(
-          uid: 'patient',
-          imageFile: _selectedImage!,
-        );
-      }
+      final dio = await DioFactory.getDio();
+      final token = await TokenStorage.getToken();
 
-      // Build update map.
-
-      final Map<String, dynamic> update = {
+      final formDataMap = <String, dynamic>{
         'full_name': _nameCtrl.text.trim(),
+        if (_ageCtrl.text.isNotEmpty)
+          'age': int.tryParse(_ageCtrl.text.trim()) ?? _ageCtrl.text.trim()
+        else if (_dobCtrl.text.isNotEmpty)
+          'age': DateTime.now().year - int.parse(_dobCtrl.text.split('-').first),
+        if (_weightCtrl.text.isNotEmpty)
+          'weight': double.tryParse(_weightCtrl.text.trim()) ?? _weightCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
-        if (newPhotoUrl != null) 'image': newPhotoUrl,
         if (_selectedGender != null) 'gender': _selectedGender!.name.toLowerCase(),
-        if (_dobCtrl.text.isNotEmpty) 'age': DateTime.now().year - int.parse(_dobCtrl.text.split('-').first),
+        if (_emergencyCtrl.text.isNotEmpty) 'emergency_number': _emergencyCtrl.text.trim(),
+        if (_medicalHistoryCtrl.text.isNotEmpty) 'medical_history': _medicalHistoryCtrl.text.trim(),
       };
 
-      final dio = await DioFactory.getDio();
-      await dio.post(ApiConstants.patientProfile, data: update);
+      final formData = FormData.fromMap(formDataMap);
+
+      if (_selectedImage != null) {
+        formData.files.add(MapEntry(
+          'image',
+          await MultipartFile.fromFile(_selectedImage!.path, filename: 'profile.png'),
+        ));
+      }
+
+      await dio.post(
+        ApiConstants.patientProfile,
+        data: formData,
+        options: Options(headers: {
+           if (token != null) 'Authorization': 'Bearer $token',
+           'Accept': 'application/json',
+        }),
+      );
 
       // Refresh auth state so UI picks up new data.
       ref.invalidate(authStateProvider);
 
-      // ignore: use_build_context_synchronously
-      ToastService.showSuccess('Profile saved successfully! 🎉'.tr(context));
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        ToastService.showSuccess('Profile saved successfully! 🎉'.tr(context));
+        Navigator.of(context).pop();
+      }
     } catch (e) {
-      // ignore: use_build_context_synchronously
-      ToastService.showError('${'Error saving profile: '.tr(context)}$e');
+      if (mounted) {
+        ToastService.showError('${'Error saving profile: '.tr(context)}$e');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -166,6 +200,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _dobCtrl.dispose();
+    _ageCtrl.dispose();
+    _weightCtrl.dispose();
+    _emergencyCtrl.dispose();
+    _medicalHistoryCtrl.dispose();
     super.dispose();
   }
 
@@ -340,6 +378,33 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             selected: _selectedGender,
                             onChanged: (g) =>
                                 setState(() => _selectedGender = g),
+                          ),
+                          const SizedBox(height: 14),
+                          _buildField(
+                            controller: _ageCtrl,
+                            label: 'Age'.tr(context),
+                            icon: Icons.calendar_today_outlined,
+                            keyboardType: TextInputType.number,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildField(
+                            controller: _weightCtrl,
+                            label: 'Weight (kg)'.tr(context),
+                            icon: Icons.monitor_weight_outlined,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          ),
+                          const SizedBox(height: 14),
+                          _buildField(
+                            controller: _emergencyCtrl,
+                            label: 'Emergency Number'.tr(context),
+                            icon: Icons.contact_emergency_outlined,
+                            keyboardType: TextInputType.phone,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildField(
+                            controller: _medicalHistoryCtrl,
+                            label: 'Medical History'.tr(context),
+                            icon: Icons.medical_services_outlined,
                           ),
                           const SizedBox(height: 36),
                           // Save button

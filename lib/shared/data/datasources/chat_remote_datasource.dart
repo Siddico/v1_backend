@@ -1,17 +1,16 @@
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:grad_imp_1/core/networking/api_constants.dart';
+import 'package:grad_imp_1/core/networking/api_response_parser.dart';
 import 'package:grad_imp_1/core/networking/dio_factory.dart';
 import 'package:grad_imp_1/core/networking/local_storage.dart';
 import 'package:grad_imp_1/core/enums/user_role.dart';
 
 class ChatRemoteDataSource {
   final LocalStorage _storage;
+
   ChatRemoteDataSource(this._storage);
 
   String get _chatEndpoint {
@@ -19,109 +18,151 @@ class ChatRemoteDataSource {
     return role == UserRole.doctor ? ApiConstants.doctorChat : ApiConstants.patientChat;
   }
 
-  // Upload an attachment (image or audio) to Cloudinary and return its download URL.
+  String get _chatReadEndpoint {
+    final role = _storage.getRole();
+    return role == UserRole.doctor ? ApiConstants.doctorChatRead : ApiConstants.patientChatRead;
+  }
+
   Future<String> uploadAttachment({
     required File file,
     required String path,
   }) async {
-    try {
-      final String cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '';
-      final String uploadPreset = dotenv.env['CLOUDINARY_UPLOAD_PRESET'] ?? 'grad_storage';
-      
-      final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].any((ext) => file.path.toLowerCase().endsWith(ext));
-      final resourceType = isImage ? 'image' : 'raw';
-      
-      final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/$resourceType/upload');
-      final request = http.MultipartRequest('POST', uri);
-      
-      request.fields['upload_preset'] = uploadPreset;
-      request.fields['public_id'] = path;
-      request.files.add(await http.MultipartFile.fromPath('file', file.path));
-      
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
-      final response = await http.Response.fromStream(streamedResponse).timeout(const Duration(seconds: 30));
-      
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('Failed to upload file to Cloudinary: ${response.statusCode}');
-      }
-      
-      final data = jsonDecode(response.body);
-      return data['secure_url'];
-    } catch (e) {
-      debugPrint('Attachment upload failed: $e');
-      return '';
-    }
+    throw UnimplementedError('File upload not supported in backend mode');
   }
 
   Future<String?> getExistingConversation(String p1, String p2) async {
-    try {
-      final dio = await DioFactory.getDio();
-      final response = await dio.get('${ApiConstants.baseUrl}/chat/conversation/$p1/$p2');
-      if (response.statusCode == 200 && response.data['data'] != null) {
-        return response.data['data']['id']?.toString();
-      }
-    } catch (e) {
-      debugPrint('Error getting existing conversation: $e');
-    }
-    return null;
+    return _generateConversationId(p1, p2);
   }
 
   Future<String> getOrCreateConversation(String p1, String p2) async {
-    final existing = await getExistingConversation(p1, p2);
-    if (existing != null) return existing;
+    return _generateConversationId(p1, p2);
+  }
 
-    try {
-      final dio = await DioFactory.getDio();
-      final response = await dio.post(
-        '${ApiConstants.baseUrl}/chat/conversation',
-        data: {'participant_1_id': p1, 'participant_2_id': p2},
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return response.data['data']['id']?.toString() ?? '';
-      }
-    } catch (e) {
-      debugPrint('Error creating conversation: $e');
-    }
-    return '${p1}_$p2'; // Fallback
+  String _generateConversationId(String p1, String p2) {
+    final id1 = int.tryParse(p1) ?? 0;
+    final id2 = int.tryParse(p2) ?? 0;
+    return '${min(id1, id2)}_${max(id1, id2)}';
   }
 
   Stream<List<Map<String, dynamic>>> getConversations(String userId) async* {
-    while (true) {
+    final controller = StreamController<List<Map<String, dynamic>>>();
+
+    Future<void> fetch() async {
       try {
         final dio = await DioFactory.getDio();
         final response = await dio.get(_chatEndpoint);
-        
-        if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-          final List<dynamic> data = response.data['data'] ?? [];
-          // Grouping or returning as is depending on backend.
-          // For now, we return the raw list assuming the backend provides conversations.
-          yield data.map((d) => d as Map<String, dynamic>).toList();
+
+        if (response.statusCode == 200) {
+          final List<dynamic> chats = ApiResponseParser.extractList(
+            response.data is Map ? response.data['data'] : null,
+          );
+          final Map<String, Map<String, dynamic>> grouped = {};
+
+          for (final chat in chats) {
+            if (chat is! Map) continue;
+            final senderId = chat['sender_id'].toString();
+            final receiverId = chat['receiver_id'].toString();
+            final otherUserId = senderId == userId ? receiverId : senderId;
+            
+            final sentAtStr = chat['sent_at'];
+            if (sentAtStr == null) continue;
+            
+            final sentAt = DateTime.tryParse(sentAtStr.toString());
+            if (sentAt == null) continue;
+
+            if (!grouped.containsKey(otherUserId) || 
+                DateTime.parse(grouped[otherUserId]!['last_message_at']).isBefore(sentAt)) {
+              
+              final otherUser = senderId == userId ? chat['receiver'] : chat['sender'];
+              final otherUserName = (otherUser is Map) ? (otherUser['full_name'] ?? 'Unknown User') : 'Unknown User';
+
+              grouped[otherUserId] = {
+                'id': _generateConversationId(userId, otherUserId),
+                'participant_1_id': userId,
+                'participant_2_id': otherUserId,
+                'last_message_at': sentAtStr,
+                'last_message': chat['chat_message'],
+                'other_user_name': otherUserName,
+              };
+            }
+          }
+
+          if (!controller.isClosed) {
+            controller.add(grouped.values.toList()..sort((a, b) => 
+                DateTime.parse(b['last_message_at']).compareTo(DateTime.parse(a['last_message_at']))));
+          }
         }
       } catch (e) {
         debugPrint('Error fetching conversations: $e');
       }
-      await Future.delayed(const Duration(seconds: 5));
     }
+
+    fetch();
+    final timer = Timer.periodic(const Duration(seconds: 30), (_) => fetch());
+
+    controller.onCancel = () {
+      timer.cancel();
+      controller.close();
+    };
+
+    yield* controller.stream;
   }
 
   Stream<List<Map<String, dynamic>>> getMessages(String conversationId) async* {
-    while (true) {
+    final controller = StreamController<List<Map<String, dynamic>>>();
+    
+    // Extract participant IDs from conversationId
+    final parts = conversationId.split('_');
+    final p1 = parts.isNotEmpty ? parts[0] : '';
+    final p2 = parts.length > 1 ? parts[1] : '';
+
+    Future<void> fetch() async {
       try {
         final dio = await DioFactory.getDio();
-        // The backend might expect a query parameter like ?receiver_id=... or just returns all chats
-        // Since we don't have a specific endpoint for a conversation, we fetch all chats and filter if needed.
-        // Or if the backend expects the conversationId (which is the other user's ID here):
-        final response = await dio.get('$_chatEndpoint/$conversationId');
-        
-        if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-          final List<dynamic> data = response.data['data'] ?? [];
-          yield data.map((d) => d as Map<String, dynamic>).toList();
+        final response = await dio.get(_chatEndpoint);
+
+        if (response.statusCode == 200) {
+          final List<dynamic> chats = ApiResponseParser.extractList(
+            response.data is Map ? response.data['data'] : null,
+          );
+          final List<Map<String, dynamic>> messages = [];
+
+          for (final chat in chats) {
+            if (chat is! Map) continue;
+            final senderId = chat['sender_id'].toString();
+            final receiverId = chat['receiver_id'].toString();
+
+            if ((senderId == p1 && receiverId == p2) || (senderId == p2 && receiverId == p1)) {
+              messages.add({
+                'id': chat['id'].toString(),
+                'sender_id': senderId,
+                'receiver_id': receiverId,
+                'content': chat['chat_message'],
+                'created_at': chat['sent_at'],
+                'is_read': chat['is_read'] ?? false,
+                'message_type': chat['message_type'] ?? 'text',
+              });
+            }
+          }
+
+          if (!controller.isClosed) {
+             controller.add(messages);
+          }
         }
       } catch (e) {
         debugPrint('Error fetching messages: $e');
       }
-      await Future.delayed(const Duration(seconds: 3));
     }
+
+    fetch();
+    final timer = Timer.periodic(const Duration(seconds: 10), (_) => fetch());
+
+    controller.onCancel = () {
+      timer.cancel();
+      controller.close();
+    };
+
+    yield* controller.stream;
   }
 
   Future<void> sendMessage({
@@ -129,7 +170,7 @@ class ChatRemoteDataSource {
     required String senderId,
     required String recipientId,
     required String content,
-    String messageType = 'text', // 'text', 'image', 'audio'
+    String messageType = 'text',
     String? attachmentUrl,
   }) async {
     try {
@@ -137,14 +178,21 @@ class ChatRemoteDataSource {
       await dio.post(
         _chatEndpoint,
         data: {
-          'receiver_id': recipientId,
+          'receiver_id': int.tryParse(recipientId),
           'message': content,
-          'message_type': messageType, // In case backend supports it
-          'attachment_url': attachmentUrl,
         },
       );
     } catch (e) {
       debugPrint('Error sending message: $e');
+    }
+  }
+  
+  Future<void> markAllAsRead() async {
+    try {
+      final dio = await DioFactory.getDio();
+      await dio.post(_chatReadEndpoint);
+    } catch (e) {
+      debugPrint('Error marking all as read: $e');
     }
   }
 }

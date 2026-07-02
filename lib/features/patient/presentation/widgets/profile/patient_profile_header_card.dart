@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:grad_imp_1/core/localization/app_localizations.dart';
@@ -10,7 +11,7 @@ import 'package:grad_imp_1/core/networking/dio_factory.dart';
 import 'package:grad_imp_1/core/constants/app_images.dart';
 import 'package:grad_imp_1/core/theme/app_colors.dart';
 import 'package:grad_imp_1/core/theme/app_text_styles.dart';
-import 'package:grad_imp_1/core/services/profile_storage_service.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
 import 'package:grad_imp_1/shared/presentation/widgets/user_qr_widget.dart';
 import 'package:grad_imp_1/shared/ui/toast_service.dart';
 import '../../../../auth/presentation/controllers/auth_providers.dart';
@@ -54,16 +55,27 @@ class _PatientProfileHeaderCardState
     ToastService.showInfo('Uploading photo…');
     try {
       final user = ref.read(authStateProvider).valueOrNull;
-      final uid = user?.id;
-      if (uid == null) throw Exception('Not signed in');
-      final url = await ProfileStorageService().uploadProfileImage(
-        uid: uid,
-        imageFile: _localImage!,
-      );
+      if (user == null) throw Exception('Not signed in');
+
       final dio = await DioFactory.getDio();
-      await dio.put(
+      final token = await TokenStorage.getToken();
+      final formData = FormData.fromMap({
+        '_method': 'PUT',
+        'image': await MultipartFile.fromFile(
+          _localImage!.path,
+          filename: xFile.name,
+        ),
+      });
+
+      await dio.post(
         ApiConstants.patientProfile,
-        data: {'photo_url': url, 'image': url},
+        data: formData,
+        options: Options(
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
       );
       ref.invalidate(authStateProvider);
       ToastService.showSuccess('Profile photo updated!');

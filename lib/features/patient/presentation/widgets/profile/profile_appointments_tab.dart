@@ -166,25 +166,29 @@ class _ProfileAppointmentsTabState extends State<ProfileAppointmentsTab> {
 
                 await _fetchAppointments(); // Refresh
 
-                final int notificationId = DateTime.now().millisecondsSinceEpoch.hashCode;
-                final reminderTime = selectedDateTime.subtract(
-                  const Duration(hours: 1),
-                );
-                if (reminderTime.isAfter(DateTime.now())) {
-                  await LocalNotificationService.instance
-                      .scheduleSingleNotification(
-                        id: notificationId,
-                        title: isArabic ? 'موعد طبيب' : 'Doctor Appointment',
-                        // ignore: use_build_context_synchronously
-                        body:
-                            // ignore: use_build_context_synchronously
-                            '${'Reminder for your appointment with'.tr(ctx)} $doctorName',
-                        firestoreTitle: 'Doctor Appointment',
-                        firestoreBody:
-                            'Reminder for your appointment with $doctorName',
-                        scheduledDateTime: reminderTime,
-                        payload: '{"type": "appointment"}',
-                      );
+                try {
+                  final int notificationId = DateTime.now().millisecondsSinceEpoch.hashCode;
+                  final reminderTime = selectedDateTime.subtract(
+                    const Duration(hours: 1),
+                  );
+                  if (reminderTime.isAfter(DateTime.now())) {
+                    await LocalNotificationService.instance
+                        .scheduleSingleNotification(
+                          id: notificationId,
+                          title: isArabic ? 'موعد طبيب' : 'Doctor Appointment',
+                          // ignore: use_build_context_synchronously
+                          body:
+                              // ignore: use_build_context_synchronously
+                              '${'Reminder for your appointment with'.tr(ctx)} $doctorName',
+                          firestoreTitle: 'Doctor Appointment',
+                          firestoreBody:
+                              'Reminder for your appointment with $doctorName',
+                          scheduledDateTime: reminderTime,
+                          payload: '{"type": "appointment"}',
+                        );
+                  }
+                } catch (e) {
+                  debugPrint('Could not schedule appointment notification: $e');
                 }
 
                 if (mounted) {
@@ -221,9 +225,10 @@ class _ProfileAppointmentsTabState extends State<ProfileAppointmentsTab> {
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     // Drag handle
                     Container(
                       margin: const EdgeInsets.only(top: 12, bottom: 4),
@@ -499,6 +504,7 @@ class _ProfileAppointmentsTabState extends State<ProfileAppointmentsTab> {
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
             );

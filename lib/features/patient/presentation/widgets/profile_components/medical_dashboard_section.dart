@@ -11,6 +11,7 @@ import 'package:grad_imp_1/core/theme/app_colors.dart';
 import 'package:grad_imp_1/core/theme/app_text_styles.dart';
 import 'package:grad_imp_1/core/utils/status_mapper.dart';
 import 'package:grad_imp_1/features/patient/presentation/widgets/profile_components/prediction_history_section.dart';
+import 'package:grad_imp_1/features/doctor/presentation/widgets/doctor_followup_section.dart';
 
 class MedicalDashboardSection extends ConsumerStatefulWidget {
   final String patientId;
@@ -28,6 +29,7 @@ class _MedicalDashboardSectionState
   bool _ppgExpanded = false;
   bool _uploadsExpanded = false;
   bool _historyExpanded = false;
+  bool _followUpExpanded = false;
 
   Widget _buildToggleHeader({
     required String title,
@@ -277,6 +279,31 @@ class _MedicalDashboardSectionState
             ],
           ),
           crossFadeState: _historyExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 250),
+        ),
+
+        _buildToggleHeader(
+          title: 'Follow-ups & Recommendations'.tr(context),
+          isExpanded: _followUpExpanded,
+          onTap: () {
+            setState(() {
+              _followUpExpanded = !_followUpExpanded;
+            });
+          },
+        ),
+        const SizedBox(height: 8),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            children: [
+              const SizedBox(height: 10),
+              DoctorFollowUpSection(patientId: widget.patientId),
+              const SizedBox(height: 24),
+            ],
+          ),
+          crossFadeState: _followUpExpanded
               ? CrossFadeState.showSecond
               : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 250),

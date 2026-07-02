@@ -1,26 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-// Removed unused firebase_auth import
 import 'package:grad_imp_1/shared/presentation/widgets/circular_loading_indicator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
-import 'dart:convert';
 import 'package:grad_imp_1/core/networking/api_constants.dart';
 import 'package:grad_imp_1/core/networking/dio_factory.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_images.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/enums/user_role.dart';
 import '../../../../shared/presentation/widgets/app_bar_controls.dart';
 import '../../../../shared/presentation/widgets/app_toast.dart';
-import '../../../../shared/presentation/providers/chat_providers.dart';
 import '../../../doctor/presentation/widgets/instruction_item.dart';
 import '../../../requests/request_doctor_dialog.dart';
-import '../pages/patient_messages_page.dart';
 import '../../../../core/localization/app_localizations.dart';
 
 class PatientScanQrPage extends ConsumerStatefulWidget {
@@ -99,19 +94,6 @@ class _PatientScanQrPageState extends ConsumerState<PatientScanQrPage> {
 
     if (!mounted) return;
 
-    String code;
-    try {
-      final decoded = jsonDecode(rawValue) as Map<String, dynamic>;
-      code = decoded['uid']?.toString() ?? rawValue;
-    } catch (_) {
-      if (rawValue.startsWith('uid:')) {
-        code = rawValue.split(';').first.replaceFirst('uid:', '');
-      } else {
-        code = rawValue;
-      }
-    }
-
-    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -122,33 +104,52 @@ class _PatientScanQrPageState extends ConsumerState<PatientScanQrPage> {
 
     try {
       final dio = await DioFactory.getDio();
+      final token = await TokenStorage.getToken();
       final response = await dio.post(
         ApiConstants.patientQr,
-        data: {'qr_data': code},
+        data: {'qr_data': rawValue},
+        options: Options(
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
       );
 
-      // Dismiss loading indicator
       if (mounted) Navigator.of(context).pop();
 
-      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-        if (!mounted) return;
-        AppToast.show(
-          context,
-          'QR Code scanned and request sent successfully'.tr(context),
-          type: AppToastType.success,
-          role: UserRole.patient,
-        );
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        final data = response.data['data'];
+        if (data['type'] == 'doctor') {
+          final doctor = data['doctor'];
+          final status = data['connection_status'];
+          if (mounted) {
+            _showDoctorInfoCard(doctor, status);
+          }
+        } else {
+          if (mounted) {
+            AppToast.show(
+              context,
+              'Invalid QR code type.'.tr(context),
+              type: AppToastType.error,
+              role: UserRole.patient,
+            );
+          }
+        }
       } else {
-        if (!mounted) return;
-        AppToast.show(
-          context,
-          'Failed to link with Doctor'.tr(context),
-          type: AppToastType.error,
-          role: UserRole.patient,
-        );
+        if (mounted) {
+          AppToast.show(
+            context,
+            'Failed to process QR code.'.tr(context),
+            type: AppToastType.error,
+            role: UserRole.patient,
+          );
+        }
       }
     } catch (e) {
-      if (mounted) Navigator.of(context).pop(); // dismiss loading
+      if (mounted) Navigator.of(context).pop();
       if (mounted) {
         AppToast.show(
           context,
@@ -160,9 +161,95 @@ class _PatientScanQrPageState extends ConsumerState<PatientScanQrPage> {
     } finally {
       if (mounted) {
         _isHandlingScan = false;
-        await _scannerController.start();
+        if (!_isShowingDialog) {
+          await _scannerController.start();
+        }
       }
     }
+  }
+
+  bool _isShowingDialog = false;
+
+  void _showDoctorInfoCard(Map<String, dynamic> doctor, String status) {
+    _isShowingDialog = true;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundImage: doctor['photo_url'] != null
+                    ? NetworkImage(doctor['photo_url'])
+                    : null,
+                child: doctor['photo_url'] == null
+                    ? const Icon(Icons.person, size: 40)
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                doctor['full_name'] ?? 'Doctor',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${doctor['specialty'] ?? ''} - ${doctor['hospital'] ?? ''}',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              if (status == 'none')
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.tealP,
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => RequestDoctorDialog(
+                        doctorId: doctor['id'].toString(),
+                      ),
+                    ).then((_) {
+                      _scannerController.start();
+                    });
+                  },
+                  child: Text(
+                    'Send Request'.tr(context),
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                )
+              else
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  onPressed: null,
+                  child: Text(
+                    status == 'pending'
+                        ? 'Request Already Sent'.tr(context)
+                        : 'Already Connected'.tr(context),
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    ).whenComplete(() {
+      _isShowingDialog = false;
+      _scannerController.start();
+    });
   }
 
   @override

@@ -1,9 +1,11 @@
+import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:grad_imp_1/core/networking/api_constants.dart';
+import 'package:grad_imp_1/core/networking/api_response_parser.dart';
 import 'package:grad_imp_1/core/networking/dio_factory.dart';
 
 class RequestService {
-  /// Create a new relationship request (patient -> doctor)
   static Future<String> createRequest({
     required String patientId,
     required String doctorId,
@@ -13,17 +15,27 @@ class RequestService {
     try {
       final dio = await DioFactory.getDio();
       final response = await dio.post(
-        '${ApiConstants.baseUrl}/patient/relationship-requests',
+        ApiConstants.patientRelationshipRequests,
         data: {
-          'doctor_id': doctorId,
+          'doctor_id': int.tryParse(doctorId) ?? doctorId,
           'message': message ?? '',
-          // Add expiry logic if API supports it, omitted for standard MVP
         },
       );
+      
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return response.data['data']?['id']?.toString() ?? 'created';
+        final data = response.data['data'];
+        if (data is Map && data.containsKey('relationship_request')) {
+          return data['relationship_request']['id'].toString();
+        }
+        return data['id']?.toString() ?? '';
       }
       throw Exception('Failed to create request');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 422) {
+        throw Exception('A pending request already exists.');
+      }
+      debugPrint('Error creating request: $e');
+      rethrow;
     } catch (e) {
       debugPrint('Error creating request: $e');
       rethrow;
@@ -33,70 +45,90 @@ class RequestService {
   static Future<void> cancelRequest({required String requestId}) async {
     try {
       final dio = await DioFactory.getDio();
-      await dio.delete(
-        '${ApiConstants.baseUrl}/patient/relationship-requests/$requestId',
-      );
+      await dio.delete('${ApiConstants.patientRelationshipRequests}/$requestId');
     } catch (e) {
       debugPrint('Error cancelling request: $e');
       rethrow;
     }
   }
 
-  /// Stream pending requests for a specific doctor
   static Stream<List<Map<String, dynamic>>> streamDoctorRequests({
     required String doctorId,
   }) async* {
-    while (true) {
+    final controller = StreamController<List<Map<String, dynamic>>>();
+
+    Future<void> fetch() async {
       try {
         final dio = await DioFactory.getDio();
-        final response = await dio.get(
-          '${ApiConstants.baseUrl}/doctor/relationship-requests',
-        );
+        final response = await dio.get(ApiConstants.doctorRelationshipRequests);
 
-        if (response.statusCode != null &&
-            response.statusCode! >= 200 &&
-            response.statusCode! < 300) {
-          final List<dynamic> data = response.data['data'] ?? [];
-          yield data.map((d) => d as Map<String, dynamic>).toList();
+        if (response.statusCode == 200) {
+          final list = ApiResponseParser.extractList(
+            response.data is Map ? response.data['data'] : response.data,
+          );
+          if (!controller.isClosed) {
+            controller.add(list.whereType<Map<String, dynamic>>().toList());
+          }
         }
       } catch (e) {
         debugPrint('Error fetching doctor requests: $e');
       }
-      await Future.delayed(const Duration(seconds: 10));
     }
+
+    fetch();
+    final timer = Timer.periodic(const Duration(seconds: 30), (_) => fetch());
+
+    controller.onCancel = () {
+      timer.cancel();
+      controller.close();
+    };
+
+    yield* controller.stream;
   }
 
-  /// Stream requests made by a specific patient
   static Stream<List<Map<String, dynamic>>> streamPatientRequests({
     required String patientId,
   }) async* {
-    while (true) {
+    final controller = StreamController<List<Map<String, dynamic>>>();
+
+    Future<void> fetch() async {
       try {
         final dio = await DioFactory.getDio();
-        final response = await dio.get(
-          '${ApiConstants.baseUrl}/patient/relationship-requests',
-        );
+        final response = await dio.get(ApiConstants.patientRelationshipRequests);
 
-        if (response.statusCode != null &&
-            response.statusCode! >= 200 &&
-            response.statusCode! < 300) {
-          final List<dynamic> data = response.data['data'] ?? [];
-          yield data.map((d) => d as Map<String, dynamic>).toList();
+        if (response.statusCode == 200) {
+          final list = ApiResponseParser.extractList(
+            response.data is Map ? response.data['data'] : response.data,
+          );
+          if (!controller.isClosed) {
+            controller.add(list.whereType<Map<String, dynamic>>().toList());
+          }
         }
       } catch (e) {
         debugPrint('Error fetching patient requests: $e');
       }
-      await Future.delayed(const Duration(seconds: 10));
     }
+
+    fetch();
+    final timer = Timer.periodic(const Duration(seconds: 30), (_) => fetch());
+
+    controller.onCancel = () {
+      timer.cancel();
+      controller.close();
+    };
+
+    yield* controller.stream;
   }
 
   static Future<Map<String, dynamic>> acceptRequest({
     required String requestId,
+    String? doctorId,
+    String? patientId,
   }) async {
     try {
       final dio = await DioFactory.getDio();
       final response = await dio.put(
-        '${ApiConstants.baseUrl}/doctor/relationship-requests/$requestId',
+        '${ApiConstants.doctorRelationshipRequests}/$requestId',
         data: {'status': 'accepted'},
       );
       return response.data as Map<String, dynamic>;
@@ -106,17 +138,16 @@ class RequestService {
     }
   }
 
-  static Future<Map<String, dynamic>> declineRequest({
+  static Future<void> declineRequest({
     required String requestId,
     String? reason,
   }) async {
     try {
       final dio = await DioFactory.getDio();
-      final response = await dio.put(
-        '${ApiConstants.baseUrl}/doctor/relationship-requests/$requestId',
-        data: {'status': 'rejected', if (reason != null) 'reason': reason},
+      await dio.put(
+        '${ApiConstants.doctorRelationshipRequests}/$requestId',
+        data: {'status': 'rejected'},
       );
-      return response.data as Map<String, dynamic>;
     } catch (e) {
       debugPrint('Error declining request: $e');
       rethrow;

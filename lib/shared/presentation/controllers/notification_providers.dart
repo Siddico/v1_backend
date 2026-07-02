@@ -4,15 +4,16 @@ import '../../data/datasources/notification_remote_datasource.dart';
 import '../../data/repositories/notification_repository_impl.dart';
 import '../../domain/repositories/notification_repository.dart';
 import '../../../features/auth/presentation/controllers/auth_providers.dart';
-import '../../../core/networking/local_storage.dart';
+
+import '../../../core/enums/user_role.dart';
 
 final notificationRemoteDataSourceProvider =
     Provider<NotificationRemoteDataSource>((ref) {
-      final userId = ref.watch(authControllerProvider).valueOrNull?.id ??
-          ref.watch(authStateProvider).valueOrNull?.id ??
-          '';
-      final storage = ref.watch(localStorageProvider);
-      return BackendNotificationDataSource(userId: userId, storage: storage);
+      final user = ref.watch(authControllerProvider).valueOrNull ??
+          ref.watch(authStateProvider).valueOrNull;
+      final userId = user?.id ?? '';
+      final isDoctor = user?.role == UserRole.doctor;
+      return BackendNotificationDataSource(userId: userId, isDoctor: isDoctor);
     });
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {

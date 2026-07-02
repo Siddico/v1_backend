@@ -17,6 +17,7 @@ class RiskStrokeCard extends StatelessWidget {
     this.riskColor = AppColors.redDeep,
     this.widthofGraph = 220,
     this.isAssessed = true,
+    this.lastPredictionTime,
   });
 
   final double percentage; // 0 - 100
@@ -27,6 +28,7 @@ class RiskStrokeCard extends StatelessWidget {
   final double widthofGraph;
   final double percenttext = 50;
   final bool isAssessed;
+  final DateTime? lastPredictionTime;
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +141,16 @@ class RiskStrokeCard extends StatelessWidget {
                     style: AppTextStyles.metricDescNeutral600_14Bold.copyWith(
                       fontFamily: isArabic ? 'Cairo' : null,
                     ),
+                  ),
+                ),
+                Text(
+                  lastPredictionTime != null
+                      ? '${'Last update:'.tr(context)} ${lastPredictionTime!.toLocal().toString().split('.')[0]}'
+                      : 'No predictions yet'.tr(context),
+                  style: AppTextStyles.metricDescNeutral600_14Bold.copyWith(
+                    fontFamily: isArabic ? 'Cairo' : null,
+                    fontSize: 12,
+                    color: Colors.grey.shade500,
                   ),
                 ),
               ],

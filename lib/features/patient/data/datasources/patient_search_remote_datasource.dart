@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:grad_imp_1/core/networking/api_constants.dart';
 import 'package:grad_imp_1/core/networking/api_response_parser.dart';

@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:grad_imp_1/core/networking/api_constants.dart';
-import 'package:grad_imp_1/core/networking/dio_factory.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
 
 abstract class DoctorRemoteDataSource {
   Stream<Map<String, dynamic>?> getDashboardStream();
@@ -12,92 +11,117 @@ class BackendDoctorDataSource implements DoctorRemoteDataSource {
   BackendDoctorDataSource({required String userId}) : _userId = userId;
 
   final String _userId;
+  final Dio _dio = Dio();
+  static const String _baseUrl = 'https://brainguard.devawy.com/api/v1';
+
+  Future<Map<String, String>> get _headers async {
+    final token = await TokenStorage.getToken();
+    return {
+      if (token != null) 'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    };
+  }
 
   @override
   Stream<Map<String, dynamic>?> getDashboardStream() async* {
-    if (_userId.isEmpty) yield null;
+    if (_userId.isEmpty) {
+      yield null;
+      return;
+    }
 
-    final staticTasks = [
-      {
-        'title': 'Review MRI Scan',
-        'description': 'Review the latest MRI scan for patient Ahmed.',
-        'time': '10:00 AM',
-        'iconCode': 0xe000,
-      },
-      {
-        'title': 'Follow-up Call',
-        'description': 'Call patient Mahmoud for follow-up.',
-        'time': '01:30 PM',
-        'iconCode': 0xe001,
-      },
-    ];
+    final controller = StreamController<Map<String, dynamic>?>();
 
-    while (true) {
+    Future<void> fetch() async {
       try {
-        final dio = await DioFactory.getDio();
-        
-        // Fetch patients
-        final response = await dio.get('${ApiConstants.baseUrl}/doctor/patients');
-        
-        // Fetch follow-ups
-        final followUpsResponse = await dio.get('${ApiConstants.baseUrl}/doctor/follow-up');
+        final headers = await _headers;
+        final response = await _dio.get(
+          '$_baseUrl/doctor/patients',
+          options: Options(headers: headers),
+        );
 
-        if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-          final List<dynamic> data = response.data['data'] ?? [];
-          final latestPatients = data.map((d) {
-            return {
-              'id': d['id'].toString(),
-              'name': d['name'] ?? d['full_name'] ?? 'Patient',
-              'diagnosis': d['diagnosis'] ?? 'N/A',
-              'status': d['status'] ?? 'Stable',
-              'lastReview': d['last_review'] ?? 'Today',
-            };
-          }).toList();
+        if (response.statusCode == 200) {
+          final List<dynamic> patientsData = response.data['data']['patients'] ?? [];
           
-          final dynamicStats = [
+          final parsedPatients = patientsData.map((p) {
+             final patientObj = p['patient'] ?? {};
+             return {
+               'doctor_id': p['doctor_id'],
+               'patient_id': p['patient_id'],
+               'status': p['status'],
+               ...patientObj, // Spread patient details into the map for easy access
+             };
+          }).toList();
+
+          final statsArray = [
             {
               'title': 'Total\nPatients',
-              'value': latestPatients.length.toString(),
-              'image': 'assets/images/green_graph.svg',
+              'value': patientsData.length.toString(),
+              'image': 'assets/images/green_graph.svg'
             }
           ];
 
-          // Parse follow ups into tasks
-          final dynamicTasks = [...staticTasks];
-          if (followUpsResponse.statusCode != null && followUpsResponse.statusCode! >= 200 && followUpsResponse.statusCode! < 300) {
-            final List<dynamic> followUpsData = followUpsResponse.data['data'] ?? [];
-            dynamicTasks.clear();
-            for (var f in followUpsData) {
-              final dateStr = f['scheduled_date']?.toString() ?? '';
-              String time = 'TBD';
-              if (dateStr.isNotEmpty) {
-                 final dt = DateTime.tryParse(dateStr);
-                 if (dt != null) {
-                    time = '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-                 }
-              }
-              dynamicTasks.add({
-                'title': 'Follow-up',
-                'description': f['notes'] ?? 'Follow up with patient',
-                'time': time,
-                'iconCode': 0xe001,
-              });
-            }
-            if (dynamicTasks.isEmpty) {
-              dynamicTasks.addAll(staticTasks); // fallback to static if empty
-            }
+          if (!controller.isClosed) {
+            controller.add({
+              'patients': parsedPatients,
+              'tasks': [],
+              'stats': statsArray,
+            });
           }
-
-          yield {
-            'patients': latestPatients,
-            'tasks': dynamicTasks,
-            'stats': dynamicStats,
-          };
+        } else {
+           if (!controller.isClosed) {
+             controller.add({});
+           }
         }
       } catch (e) {
         debugPrint('Error fetching doctor dashboard: $e');
+        if (!controller.isClosed) {
+          controller.add({});
+        }
       }
-      await Future.delayed(const Duration(seconds: 10));
+    }
+
+    fetch();
+    final timer = Timer.periodic(const Duration(seconds: 30), (_) => fetch());
+
+    controller.onCancel = () {
+      timer.cancel();
+      controller.close();
+    };
+
+    yield* controller.stream;
+  }
+
+  // ignore: unused_element
+  Future<void> _addPatient(String patientId) async {
+    try {
+      final headers = await _headers;
+      await _dio.post(
+        '$_baseUrl/doctor/patients',
+        data: {"patient_id": patientId},
+        options: Options(headers: headers),
+      );
+    } catch (e) {
+      debugPrint('Error adding patient: $e');
+      rethrow;
+    }
+  }
+
+  // ignore: unused_element
+  Future<Map<String, dynamic>> _getPatientDetail(String patientId) async {
+    try {
+      final headers = await _headers;
+      final response = await _dio.get(
+        '$_baseUrl/doctor/patients/$patientId',
+        options: Options(headers: headers),
+      );
+      
+      if (response.statusCode == 200) {
+        return response.data['data']['patient'] ?? {};
+      }
+      throw Exception('Failed to get patient details');
+    } catch (e) {
+      debugPrint('Error getting patient details: $e');
+      rethrow;
     }
   }
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:grad_imp_1/shared/presentation/widgets/app_toast.dart';
@@ -77,7 +76,7 @@ class _SignupFormState extends State<SignupForm> {
     return null;
   }
 
-  /// No longer querying Firebase for phone availability. Let the backend handle validation.
+  /// Backend handles phone validation.
   void _onPhoneChanged(String value) {
     // Keep this empty or just setState if you want.
     // The Laravel backend will handle uniqueness validation.
@@ -402,7 +401,7 @@ class _SignupFormState extends State<SignupForm> {
                         _buildPolicySection(
                           title: '2. Data Security'.tr(context),
                           content:
-                              'Your medical data is encrypted and securely stored on Firebase, accessible only to you and your authorized healthcare providers.'
+                              'Your medical data is encrypted and securely stored on our dedicated healthcare servers, accessible only to you and your authorized healthcare providers.'
                                   .tr(context),
                           accentColor: theme.primaryDarkColor,
                         ),

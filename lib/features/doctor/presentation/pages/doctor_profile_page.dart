@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:grad_imp_1/shared/presentation/widgets/circular_loading_indicator.dart';
 
-import '../../../../core/services/profile_storage_service.dart';
 import '../../../../shared/ui/toast_service.dart';
+import 'package:dio/dio.dart';
+import 'package:grad_imp_1/core/networking/api_constants.dart';
+import 'package:grad_imp_1/core/networking/dio_factory.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_images.dart';
@@ -99,13 +102,45 @@ class _DoctorProfilePageState extends ConsumerState<DoctorProfilePage> {
     ToastService.showInfo('Saving your profile…'.tr(context));
 
     try {
-      String? newPhotoUrl;
+      final dio = await DioFactory.getDio();
+      final token = await TokenStorage.getToken();
+
+      final formDataMap = <String, dynamic>{
+        'full_name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'gender': _isMale ? 'male' : 'female',
+        'license_number': _licenseController.text.trim(),
+        'bio': _bioController.text.trim(),
+        'years_of_experience': _yearsController.text.trim(),
+        'patients_count': _patientsCountController.text.trim(),
+        'specialty': _specializationController.text.trim(),
+      };
+
+      final formData = FormData.fromMap(formDataMap);
+
       if (_selectedImage != null) {
-        newPhotoUrl = await ProfileStorageService().uploadProfileImage(
-          uid: user.id,
-          imageFile: _selectedImage!,
+        formData.files.add(
+          MapEntry(
+            'image',
+            await MultipartFile.fromFile(
+              _selectedImage!.path,
+              filename: 'profile.jpg',
+            ),
+          ),
         );
       }
+
+      await dio.post(
+        ApiConstants.doctorProfile,
+        data: formData,
+        options: Options(
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
 
       final userRepository = ref.read(userRepositoryProvider);
 
@@ -113,17 +148,8 @@ class _DoctorProfilePageState extends ConsumerState<DoctorProfilePage> {
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
         gender: _isMale ? 'male' : 'female',
-        photoUrl: newPhotoUrl ?? user.photoUrl,
       );
       await userRepository.updateUser(updatedUser);
-
-      await userRepository.updateDoctorProfile(user.id, {
-        'license_number': _licenseController.text.trim(),
-        'bio': _bioController.text.trim(),
-        'years_experience': _yearsController.text.trim(),
-        'patients_count': _patientsCountController.text.trim(),
-        'specialization': _specializationController.text.trim(),
-      });
 
       _selectedImage = null;
       ref.invalidate(authStateProvider);
@@ -332,35 +358,35 @@ class _DoctorProfilePageState extends ConsumerState<DoctorProfilePage> {
         bottomNavigationBar: _isEditMode
             ? null
             : CustomBottomNavBar(
-          currentIndex: _currentNavIndex,
-          onTap: _handleNavTap,
-          labels: [
-            'Home'.tr(context),
-            'Search'.tr(context),
-            'Message'.tr(context),
-            'Profile'.tr(context),
-          ],
-          selectedIcons: const [
-            AppImages.homeSelectedSvg,
-            AppImages.searchSelectedSvg,
-            AppImages.messageLogoSvg,
-            AppImages.profileSelectedSvg,
-          ],
-          unselectedIcons: const [
-            AppImages.homeUnselectedSvg,
-            AppImages.searchUnselectedSvg,
-            AppImages.messageLogoSvg,
-            AppImages.profileUnselectedSvg,
-          ],
-          activeColor: AppColors.redDeep,
-          inactiveColor: AppColors.redSoft,
-          centerButtonColor: AppColors.redDeep,
-          centerButtonBorderColor: AppColors.pinkLight,
-          centerButtonIcon: AppImages.scanQrCodeSvg,
-          centerButtonOnTap: () {
-            context.push(AppConstants.routeDoctorScanQr);
-          },
-        ),
+                currentIndex: _currentNavIndex,
+                onTap: _handleNavTap,
+                labels: [
+                  'Home'.tr(context),
+                  'Search'.tr(context),
+                  'Message'.tr(context),
+                  'Profile'.tr(context),
+                ],
+                selectedIcons: const [
+                  AppImages.homeSelectedSvg,
+                  AppImages.searchSelectedSvg,
+                  AppImages.messageLogoSvg,
+                  AppImages.profileSelectedSvg,
+                ],
+                unselectedIcons: const [
+                  AppImages.homeUnselectedSvg,
+                  AppImages.searchUnselectedSvg,
+                  AppImages.messageLogoSvg,
+                  AppImages.profileUnselectedSvg,
+                ],
+                activeColor: AppColors.redDeep,
+                inactiveColor: AppColors.redSoft,
+                centerButtonColor: AppColors.redDeep,
+                centerButtonBorderColor: AppColors.pinkLight,
+                centerButtonIcon: AppImages.scanQrCodeSvg,
+                centerButtonOnTap: () {
+                  context.push(AppConstants.routeDoctorScanQr);
+                },
+              ),
       ),
     );
   }

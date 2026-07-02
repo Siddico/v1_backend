@@ -47,11 +47,17 @@ class _PatientUploadedFilesSectionState
 
       for (var response in results) {
         if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-          final data = response.data['data'] as List<dynamic>? ?? [];
-          for (var item in data) {
+          final rawData = response.data['data'];
+          List<dynamic> list = [];
+          if (rawData is List) {
+            list = rawData;
+          } else if (rawData is Map) {
+            list = rawData['lab_documents'] ?? rawData['radiology_imaging'] ?? [];
+          }
+          for (var item in list) {
             final doc = item as Map<String, dynamic>;
             combined.add({
-              'fileName': doc['file_name'] ?? doc['title'] ?? 'Document',
+              'fileName': doc['file_name'] ?? doc['description'] ?? doc['title'] ?? 'Document',
               'downloadUrl': doc['file_url'] ?? doc['url'] ?? '',
               'category': doc['type'] ?? doc['imaging_type'] ?? doc['category'] ?? 'other',
               'createdAt': doc['uploaded_at'] ?? doc['created_at'],

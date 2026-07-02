@@ -51,6 +51,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> sendPasswordResetLink(String email) {
+    return _remoteDataSource.sendPasswordResetLink(email);
+  }
+
+  @override
   Future<String> verifyOtp({required String email, required String code}) {
     return _remoteDataSource.verifyOtp(email: email, code: code);
   }

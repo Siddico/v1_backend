@@ -1,4 +1,5 @@
 import 'package:grad_imp_1/core/localization/app_localizations.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:grad_imp_1/core/constants/app_images.dart';
@@ -15,7 +16,7 @@ import 'package:grad_imp_1/shared/domain/entities/user_entity.dart';
 import 'package:grad_imp_1/features/auth/presentation/controllers/auth_providers.dart';
 import 'package:grad_imp_1/core/networking/api_constants.dart';
 import 'package:grad_imp_1/core/networking/dio_factory.dart';
-import 'package:grad_imp_1/features/auth/presentation/controllers/auth_providers.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
 import 'package:grad_imp_1/core/utils/stroke_prediction_logic.dart';
 import 'package:grad_imp_1/core/utils/app_tutorial_helper.dart';
 
@@ -48,13 +49,13 @@ class _InformationSectionState extends ConsumerState<InformationSection> {
     setState(() => _isLoadingMedicalData = true);
     try {
       final dio = await DioFactory.getDio();
+      final patientProfileId = widget.patient.patientProfile?['id']?.toString() ?? widget.patient.id;
       final response = await dio.get(
         ApiConstants.doctorMedicalData,
-        queryParameters: {'patient_id': widget.patient.id},
+        queryParameters: {'patient_id': patientProfileId},
       );
       if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-        // the response returns an array or single object, assuming array of data or single object
-        final data = response.data['data'];
+        final data = response.data['data']?['medical_data'] ?? response.data['data'];
         if (data is List && data.isNotEmpty) {
           setState(() => _medicalData = data.first);
         } else if (data is Map<String, dynamic>) {
@@ -63,6 +64,156 @@ class _InformationSectionState extends ConsumerState<InformationSection> {
       }
     } catch (e) {
       debugPrint('Error fetching medical data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingMedicalData = false);
+    }
+  }
+
+  void _showUpdateMedicalDataDialog() {
+    final diagnosisController = TextEditingController(text: _medicalData?['diagnosis']?.toString() ?? '');
+    final treatmentController = TextEditingController(text: _medicalData?['treatment_plan']?.toString() ?? '');
+    final notesController = TextEditingController(text: _medicalData?['notes']?.toString() ?? _medicalData?['doctor_notes']?.toString() ?? '');
+    final hrController = TextEditingController(text: _medicalData?['heart_rate']?.toString() ?? '');
+    final bpController = TextEditingController(text: _medicalData?['blood_pressure']?.toString() ?? '');
+    final glucoseController = TextEditingController(text: _medicalData?['blood_glucose']?.toString() ?? '');
+    final cholesterolController = TextEditingController(text: _medicalData?['cholesterol']?.toString() ?? '');
+    final hrvController = TextEditingController(text: _medicalData?['hrv']?.toString() ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Update Medical Data'.tr(context)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: diagnosisController,
+                  decoration: InputDecoration(labelText: 'Diagnosis'.tr(context)),
+                ),
+                TextField(
+                  controller: treatmentController,
+                  decoration: InputDecoration(labelText: 'Treatment Plan'.tr(context)),
+                ),
+                TextField(
+                  controller: hrController,
+                  decoration: InputDecoration(labelText: 'Heart Rate (bpm)'.tr(context)),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: bpController,
+                  decoration: InputDecoration(labelText: 'Blood Pressure (mmHg)'.tr(context)),
+                ),
+                TextField(
+                  controller: glucoseController,
+                  decoration: InputDecoration(labelText: 'Blood Glucose (mg/dL)'.tr(context)),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: cholesterolController,
+                  decoration: InputDecoration(labelText: 'Cholesterol (mg/dL)'.tr(context)),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: hrvController,
+                  decoration: InputDecoration(labelText: 'HRV (ms)'.tr(context)),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: notesController,
+                  decoration: InputDecoration(labelText: 'Doctor Notes'.tr(context)),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr(context)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _updateMedicalData(
+                  diagnosis: diagnosisController.text.trim(),
+                  treatment: treatmentController.text.trim(),
+                  notes: notesController.text.trim(),
+                  hr: double.tryParse(hrController.text.trim()),
+                  bp: bpController.text.trim(),
+                  glucose: double.tryParse(glucoseController.text.trim()),
+                  cholesterol: double.tryParse(cholesterolController.text.trim()),
+                  hrv: double.tryParse(hrvController.text.trim()),
+                );
+              },
+              child: Text('Save'.tr(context)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateMedicalData({
+    required String diagnosis,
+    required String treatment,
+    required String notes,
+    double? hr,
+    required String bp,
+    double? glucose,
+    double? cholesterol,
+    double? hrv,
+  }) async {
+    setState(() => _isLoadingMedicalData = true);
+    try {
+      final dio = await DioFactory.getDio();
+      final token = await TokenStorage.getToken();
+      final patientProfileId = widget.patient.patientProfile?['id'] ?? widget.patient.id;
+      
+      final response = await dio.post(
+        '${ApiConstants.baseUrl}/doctor/medical-data',
+        data: {
+          'patient_id': patientProfileId,
+          'diagnosis': diagnosis,
+          'treatment_plan': treatment,
+          'notes': notes,
+          'heart_rate': hr,
+          'blood_pressure': bp,
+          'blood_glucose': glucose,
+          'cholesterol': cholesterol,
+          'hrv': hrv,
+        },
+        options: Options(
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        if (mounted) {
+          AppToast.show(
+            context,
+            'Medical data updated successfully.'.tr(context),
+            type: AppToastType.success,
+            role: UserRole.doctor,
+          );
+        }
+        await _fetchMedicalData();
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          'Failed to update medical data: $e'.tr(context),
+          type: AppToastType.error,
+          role: UserRole.doctor,
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoadingMedicalData = false);
     }
@@ -535,19 +686,16 @@ class _InformationSectionState extends ConsumerState<InformationSection> {
                           );
                         },
                       ),
-                      const SizedBox(width: 10),
-                      MiniActionCard(
-                        label: 'Update',
-                        iconImage: AppImages.updateIconSvg,
-                        onTap: () {
-                          AppToast.show(
-                            context,
-                            'Coming soon',
-                            type: AppToastType.info,
-                            role: UserRole.doctor,
-                          );
-                        },
-                      ),
+                      if (isDoctorView) ...[
+                        const SizedBox(width: 10),
+                        MiniActionCard(
+                          label: 'Update',
+                          iconImage: AppImages.updateIconSvg,
+                          onTap: () {
+                            _showUpdateMedicalDataDialog();
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ],

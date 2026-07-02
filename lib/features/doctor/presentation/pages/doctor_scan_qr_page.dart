@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:grad_imp_1/core/networking/api_constants.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
-import 'dart:convert';
-import 'dart:math' as math;
-import 'package:grad_imp_1/core/networking/api_constants.dart';
 import 'package:grad_imp_1/core/networking/dio_factory.dart';
+import 'package:grad_imp_1/core/networking/token_storage.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_images.dart';
@@ -94,22 +93,6 @@ class _DoctorScanQrPageState extends ConsumerState<DoctorScanQrPage> {
 
     if (!mounted) return;
 
-    // Extract the actual patient UID from the QR payload.
-    // The QR stores JSON: {"uid": "<firestore_uid>", "role": "patient"}
-    // Fallback: if rawValue is not valid JSON, treat it as a bare UID.
-    String code;
-    try {
-      final decoded = jsonDecode(rawValue) as Map<String, dynamic>;
-      code = decoded['uid']?.toString() ?? rawValue;
-    } catch (_) {
-      if (rawValue.startsWith('uid:')) {
-        code = rawValue.split(';').first.replaceFirst('uid:', '');
-      } else {
-        code = rawValue;
-      }
-    }
-
-    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -120,50 +103,195 @@ class _DoctorScanQrPageState extends ConsumerState<DoctorScanQrPage> {
 
     try {
       final dio = await DioFactory.getDio();
-      
-      // Parse code to int if backend expects integer ID
-      final patientId = int.tryParse(code) ?? code;
-
+      final token = await TokenStorage.getToken();
       final response = await dio.post(
-        ApiConstants.doctorPatients,
-        data: {'patient_id': patientId},
+        ApiConstants.doctorScanQr,
+        data: {'qr_data': rawValue},
+        options: Options(
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
       );
 
-      // Dismiss loading indicator
       if (mounted) Navigator.of(context).pop();
 
-      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-        if (!mounted) return;
-        AppToast.show(
-          context,
-          'Patient linked successfully'.tr(context),
-          type: AppToastType.success,
-          role: UserRole.doctor,
-        );
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        final data = response.data['data'];
+        if (data['type'] == 'patient') {
+          final patient = data['patient'];
+          final isConnected = data['is_connected'] ?? false;
+          if (mounted) {
+            _showPatientInfoCard(patient, isConnected);
+          }
+        } else {
+          if (mounted)
+            AppToast.show(
+              context,
+              'Invalid QR code type.',
+              type: AppToastType.error,
+              role: UserRole.doctor,
+            );
+        }
       } else {
-        if (!mounted) return;
-        AppToast.show(
-          context,
-          'Failed to connect patient'.tr(context),
-          type: AppToastType.error,
-          role: UserRole.doctor,
-        );
+        if (mounted)
+          AppToast.show(
+            context,
+            'Failed to process QR',
+            type: AppToastType.error,
+            role: UserRole.doctor,
+          );
       }
     } catch (e) {
-      if (mounted) Navigator.of(context).pop(); // dismiss loading
-      if (mounted) {
+      if (mounted) Navigator.of(context).pop();
+      if (mounted)
         AppToast.show(
           context,
-          '${'Error connecting patient:'.tr(context)} $e',
+          'Error checking QR: $e',
           type: AppToastType.error,
           role: UserRole.doctor,
         );
-      }
     } finally {
       if (mounted) {
         _isHandlingScan = false;
-        await _scannerController.start();
+        if (!_isShowingDialog) {
+          await _scannerController.start();
+        }
       }
+    }
+  }
+
+  bool _isShowingDialog = false;
+
+  void _showPatientInfoCard(Map<String, dynamic> patient, bool isConnected) {
+    _isShowingDialog = true;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundImage: patient['photo_url'] != null
+                    ? NetworkImage(patient['photo_url'])
+                    : null,
+                child: patient['photo_url'] == null
+                    ? const Icon(Icons.person, size: 40)
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                patient['full_name'] ?? 'Patient',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Age: ${patient['age'] ?? 'N/A'} - Blood Type: ${patient['blood_type'] ?? 'N/A'}',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              if (!isConnected)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.redDeep,
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await _addPatient(patient['id'].toString());
+                  },
+                  child: const Text(
+                    'Add Patient',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                )
+              else
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  onPressed: null,
+                  child: const Text(
+                    'Already in Your List',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    ).whenComplete(() {
+      _isShowingDialog = false;
+      _scannerController.start();
+    });
+  }
+
+  Future<void> _addPatient(String patientId) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularLoadingIndicator(size: 32, color: AppColors.redDeep),
+      ),
+    );
+
+    try {
+      final dio = await DioFactory.getDio();
+      final token = await TokenStorage.getToken();
+      final response = await dio.post(
+        '${ApiConstants.baseUrl}${ApiConstants.doctorPatients}',
+        data: {'patient_id': patientId},
+        options: Options(
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (mounted) Navigator.of(context).pop();
+
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        if (mounted)
+          AppToast.show(
+            context,
+            'Patient added to your list',
+            type: AppToastType.success,
+            role: UserRole.doctor,
+          );
+      } else {
+        if (mounted)
+          AppToast.show(
+            context,
+            'Failed to add patient',
+            type: AppToastType.error,
+            role: UserRole.doctor,
+          );
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      if (mounted)
+        AppToast.show(
+          context,
+          'Error adding patient: $e',
+          type: AppToastType.error,
+          role: UserRole.doctor,
+        );
     }
   }
 

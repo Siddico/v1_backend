@@ -1,10 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 DateTime _parseDateTime(dynamic value) {
   if (value is DateTime) return value;
-  if (value is Timestamp) return value.toDate();
-  if (value is String) return DateTime.parse(value);
+  if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
   return DateTime.now();
 }
 
@@ -14,14 +12,19 @@ class PredictionResult extends Equatable {
   final String signalId;
   final String userId;
   final DateTime predictionTimestamp;
-  final String strokeRisk; // 'low', 'medium', 'high'
+  final String strokeRisk; // 'low', 'medium', 'high', 'moderate'
   final String prediction; // e.g., 'PAC', 'AF', 'NSR'
   final double riskScore; // 0.0 to 1.0
   final double confidence; // 0.0 to 1.0
   final String status; // UI status string (af, pac, nsr, etc.)
   final Map<String, dynamic>? modelOutput; // Raw model output data
   final String? message; // Human-readable message
-  final Map<String, dynamic>? recommendations; // Health recommendations
+  final dynamic recommendations; // Health recommendations (List or Map)
+  final String? predictionType;
+  final String? overview;
+  final String? modelVersion;
+  final bool? predictBasedOnFiles;
+  final Map<String, dynamic>? probabilities;
 
   const PredictionResult({
     required this.predictionId,
@@ -36,23 +39,47 @@ class PredictionResult extends Equatable {
     this.modelOutput,
     this.message,
     this.recommendations,
+    this.predictionType,
+    this.overview,
+    this.modelVersion,
+    this.predictBasedOnFiles,
+    this.probabilities,
   });
 
   /// Create from JSON response
   factory PredictionResult.fromJson(Map<String, dynamic> json) {
+    double calcRiskScore = 0.0;
+    if (json['risk_score'] != null) {
+      calcRiskScore = (json['risk_score'] as num).toDouble();
+    } else if (json['score'] != null) {
+      final s = (json['score'] as num).toDouble();
+      calcRiskScore = s > 1.0 ? s / 100.0 : s;
+    }
+
     return PredictionResult(
-      predictionId: json['prediction_id'] ?? json['id'] ?? '',
-      signalId: json['signal_id'] ?? '',
-      userId: json['user_id'] ?? '',
-      predictionTimestamp: _parseDateTime(json['prediction_timestamp']),
-      strokeRisk: json['stroke_risk'] ?? 'low',
-      prediction: json['prediction'] ?? '',
-      riskScore: (json['risk_score'] ?? 0.0).toDouble(),
+      predictionId: (json['prediction_id'] ?? json['id'] ?? '').toString(),
+      signalId: (json['signal_id'] ?? '').toString(),
+      userId: (json['user_id'] ?? json['patient_id'] ?? '').toString(),
+      predictionTimestamp: _parseDateTime(
+        json['prediction_timestamp'] ?? json['predicted_at'] ?? json['created_at'],
+      ),
+      strokeRisk: (json['stroke_risk'] ?? json['risk_level'] ?? 'low').toString(),
+      prediction: (json['prediction'] ?? '').toString(),
+      riskScore: calcRiskScore,
       confidence: (json['confidence'] ?? 0.0).toDouble(),
-      status: json['status'] ?? '',
-      modelOutput: json['model_output'],
-      message: json['message'],
+      status: (json['status'] ?? '').toString(),
+      modelOutput: json['model_output'] is Map<String, dynamic> ? json['model_output'] : null,
+      message: json['message']?.toString(),
       recommendations: json['recommendations'],
+      predictionType: json['prediction_type']?.toString(),
+      overview: json['overview']?.toString(),
+      modelVersion: json['model_version']?.toString(),
+      predictBasedOnFiles: json['predict_based_on_files'] as bool?,
+      probabilities: json['probabilities'] is Map<String, dynamic>
+          ? json['probabilities']
+          : (json['probabilities'] is Map
+              ? Map<String, dynamic>.from(json['probabilities'])
+              : null),
     );
   }
 
@@ -71,6 +98,11 @@ class PredictionResult extends Equatable {
       'model_output': modelOutput,
       'message': message,
       'recommendations': recommendations,
+      'prediction_type': predictionType,
+      'overview': overview,
+      'model_version': modelVersion,
+      'predict_based_on_files': predictBasedOnFiles,
+      'probabilities': probabilities,
     };
   }
 
@@ -91,6 +123,11 @@ class PredictionResult extends Equatable {
       modelOutput: modelOutput,
       message: message,
       recommendations: recommendations,
+      predictionType: predictionType,
+      overview: overview,
+      modelVersion: modelVersion,
+      predictBasedOnFiles: predictBasedOnFiles,
+      probabilities: probabilities,
     );
   }
 
@@ -114,6 +151,11 @@ class PredictionResult extends Equatable {
         modelOutput,
         message,
         recommendations,
+        predictionType,
+        overview,
+        modelVersion,
+        predictBasedOnFiles,
+        probabilities,
       ];
 
   @override

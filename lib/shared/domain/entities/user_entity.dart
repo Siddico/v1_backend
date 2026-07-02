@@ -64,6 +64,41 @@ class UserEntity {
   }
 
   factory UserEntity.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic>? pProfile;
+    if (json['patient_profile'] != null) {
+      pProfile = Map<String, dynamic>.from(json['patient_profile']);
+      if (pProfile.containsKey('emergency_number')) {
+        pProfile['emergency_contact_phone'] = pProfile['emergency_number'];
+      } else if (pProfile.containsKey('emergency_contact_phone')) {
+        pProfile['emergency_number'] = pProfile['emergency_contact_phone'];
+      }
+      if (pProfile.containsKey('medical_history')) {
+        pProfile['medical_history_summary'] = pProfile['medical_history'];
+      } else if (pProfile.containsKey('medical_history_summary')) {
+        pProfile['medical_history'] = pProfile['medical_history_summary'];
+      }
+    }
+
+    Map<String, dynamic>? dProfile;
+    if (json['doctor_profile'] != null) {
+      dProfile = Map<String, dynamic>.from(json['doctor_profile']);
+      if (dProfile.containsKey('specialty')) {
+        dProfile['specialization'] = dProfile['specialty'];
+      } else if (dProfile.containsKey('specialization')) {
+        dProfile['specialty'] = dProfile['specialization'];
+      }
+      if (dProfile.containsKey('hospital')) {
+        dProfile['hospital_affiliation'] = dProfile['hospital'];
+      } else if (dProfile.containsKey('hospital_affiliation')) {
+        dProfile['hospital'] = dProfile['hospital_affiliation'];
+      }
+      if (dProfile.containsKey('years_of_experience')) {
+        dProfile['years_experience'] = dProfile['years_of_experience'];
+      } else if (dProfile.containsKey('years_experience')) {
+        dProfile['years_of_experience'] = dProfile['years_experience'];
+      }
+    }
+
     return UserEntity(
       id: json['id']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
@@ -71,9 +106,9 @@ class UserEntity {
       role: UserRoleX.fromString(json['role']?.toString() ?? 'patient'),
       phone: json['phone']?.toString(),
       gender: json['gender']?.toString(),
-      dateOfBirth: json['date_of_birth']?.toString() ?? json['patient_profile']?['date_of_birth']?.toString(),
-      doctorProfile: json['doctor_profile'] as Map<String, dynamic>?,
-      patientProfile: json['patient_profile'] as Map<String, dynamic>?,
+      dateOfBirth: json['date_of_birth']?.toString() ?? pProfile?['date_of_birth']?.toString(),
+      doctorProfile: dProfile,
+      patientProfile: pProfile,
       photoUrl: json['photo_url']?.toString() ?? json['image']?.toString(),
       aiRiskStrokeRate: (json['ai_risk_stroke_rate'] as num?)?.toDouble(),
       status: json['status']?.toString(),

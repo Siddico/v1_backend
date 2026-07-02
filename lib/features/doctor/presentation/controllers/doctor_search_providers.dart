@@ -18,21 +18,22 @@ final doctorLinkedPatientsProvider = StreamProvider<List<DoctorSearchPatientItem
       final response = await dio.get('${ApiConstants.baseUrl}/doctor/patients');
 
       if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
-        final List<dynamic> data = response.data['data'] ?? [];
+        final List<dynamic> data = response.data['data']?['patients'] ?? [];
         final items = <DoctorSearchPatientItem>[];
         for (final doc in data) {
-          final patientId = doc['id']?.toString() ?? '';
+          final patientObj = doc['patient'] ?? {};
+          final patientId = patientObj['id']?.toString() ?? doc['patient_id']?.toString() ?? '';
           if (patientId.isEmpty) continue;
           
           final shortId = '#${patientId.padLeft(4, '0')}';
           
           items.add(
             DoctorSearchPatientItem(
-              name: doc['name']?.toString() ?? 'Patient',
-              diagnosis: doc['diagnosis']?.toString() ?? 'N/A',
+              name: patientObj['full_name']?.toString() ?? 'Patient',
+              diagnosis: doc['diagnoses']?.toString() ?? 'N/A',
               patientId: shortId,
-              status: doc['status']?.toString() ?? 'Stable',
-              image: doc['photo_url']?.toString() ?? '',
+              status: patientObj['status']?.toString() ?? doc['status']?.toString() ?? 'Stable',
+              image: patientObj['photo_url']?.toString() ?? patientObj['image']?.toString() ?? '',
               firestoreId: patientId,
             ),
           );

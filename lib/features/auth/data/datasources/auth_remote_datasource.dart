@@ -1,11 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../../../core/enums/gender.dart';
 import '../../../../core/enums/user_role.dart';
 import '../../../../core/networking/api_constants.dart';
 import '../../../../core/networking/dio_factory.dart';
 import '../../../../core/networking/local_storage.dart';
+import '../../../../core/networking/token_storage.dart';
 import '../../../../shared/domain/entities/user_entity.dart';
 import '../../domain/auth_exception.dart';
 import '../models/backend_user_model.dart';
@@ -29,6 +28,8 @@ abstract class AuthRemoteDataSource {
 
   Future<void> sendOtp(String email, String role);
 
+  Future<void> sendPasswordResetLink(String email);
+
   Future<String> verifyOtp({required String email, required String code});
 
   Future<void> resetPassword({
@@ -46,19 +47,32 @@ class BackendAuthDataSource implements AuthRemoteDataSource {
 
   @override
   Future<UserEntity?> getCurrentUser() async {
+    final token = await TokenStorage.getToken();
+    if (token == null || token.isEmpty) {
+      await _storage.clearRole();
+      return null;
+    }
+
     try {
       final dio = await DioFactory.getDio();
       final response = await dio.get(ApiConstants.me);
 
-      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300 && response.data['success'] == true) {
-        final userData = response.data['data']['user'];
+      if ((response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300) {
+        final dataMap = response.data['data'] as Map<String, dynamic>? ?? response.data as Map<String, dynamic>;
+        final userData = dataMap['user'] as Map<String, dynamic>? ?? dataMap;
         final user = BackendUserModel.fromJson(userData).toEntity();
         await _storage.saveRole(user.role);
         return user;
       }
       return null;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await TokenStorage.clearAll();
+        await _storage.clearRole();
+        return null;
+      }
+      return null;
     } catch (e) {
-      await _storage.clearRole();
       return null;
     }
   }
@@ -72,38 +86,26 @@ class BackendAuthDataSource implements AuthRemoteDataSource {
         data: {'email': email, 'password': password},
       );
 
-      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300 && response.data['success'] == true) {
-        final token = response.data['data']['token'];
+      if ((response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300) {
+        final dataMap = response.data['data'] as Map<String, dynamic>? ?? response.data as Map<String, dynamic>;
+        final token = dataMap['token']?.toString();
+        if (token != null && token.isNotEmpty) {
+          await TokenStorage.saveToken(token);
+        }
 
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', token);
-
-        final userData = response.data['data']['user'];
+        final userData = dataMap['user'] as Map<String, dynamic>? ?? dataMap;
         final user = BackendUserModel.fromJson(userData).toEntity();
 
         await _storage.saveRole(user.role);
         return user;
       } else {
-        throw AuthException(response.data['message'] ?? 'Login failed.');
+        throw const AuthException('Login failed.');
       }
     } on DioException catch (e) {
-      String errorMessage = 'Registration failed.';
-      if (e.response?.data != null) {
-        if (e.response?.data['errors'] != null) {
-          try {
-            final errors = e.response?.data['errors'] as Map<String, dynamic>;
-            final firstError = errors.values.first;
-            errorMessage = firstError is List ? firstError.first.toString() : firstError.toString();
-          } catch (_) {
-            errorMessage = e.response?.data['message'] ?? 'Validation Error';
-          }
-        } else if (e.response?.data['message'] != null) {
-          errorMessage = e.response!.data['message'].toString();
-        }
-      }
-      throw AuthException(errorMessage);
+      _handleDioException(e);
     } catch (e) {
-      throw AuthException('An unexpected error occurred: $e');
+      if (e is AuthException) rethrow;
+      throw const AuthException('An unexpected error occurred. Please try again.');
     }
   }
 
@@ -127,59 +129,47 @@ class BackendAuthDataSource implements AuthRemoteDataSource {
           'password': password,
           'password_confirmation': passwordConfirmation,
           'phone': phone,
-          'gender': gender.name,
-          'role': role.value,
-          'agreement': true,
+          'gender': gender.name.toLowerCase(),
+          'role': role.value.toLowerCase(),
         },
       );
 
-      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300 && response.data['success'] == true) {
-        final token = response.data['data']['token'];
+      if ((response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300) {
+        final dataMap = response.data['data'] as Map<String, dynamic>? ?? response.data as Map<String, dynamic>;
+        final token = dataMap['token']?.toString();
+        if (token != null && token.isNotEmpty) {
+          await TokenStorage.saveToken(token);
+        }
 
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', token);
-
-        final userData = response.data['data']['user'];
+        final userData = dataMap['user'] as Map<String, dynamic>? ?? dataMap;
         final user = BackendUserModel.fromJson(userData).toEntity();
 
         await _storage.saveRole(user.role);
         return user;
       } else {
-        throw AuthException(response.data['message'] ?? 'Registration failed.');
+        throw const AuthException('Registration failed.');
       }
     } on DioException catch (e) {
-      String errorMessage = 'Request failed.';
-      if (e.response?.data != null) {
-        if (e.response?.data['errors'] != null) {
-          try {
-            final errors = e.response?.data['errors'] as Map<String, dynamic>;
-            final firstError = errors.values.first;
-            errorMessage = firstError is List ? firstError.first.toString() : firstError.toString();
-          } catch (_) {
-            errorMessage = e.response?.data['message'] ?? 'Validation Error';
-          }
-        } else if (e.response?.data['message'] != null) {
-          errorMessage = e.response!.data['message'].toString();
-        }
-      }
-      throw AuthException(errorMessage);
+      _handleDioException(e);
     } catch (e) {
-      throw AuthException('An unexpected error occurred: $e');
+      if (e is AuthException) rethrow;
+      throw const AuthException('An unexpected error occurred. Please try again.');
     }
   }
 
   @override
   Future<void> logout() async {
-    try {
-      final dio = await DioFactory.getDio();
-      await dio.post(ApiConstants.logout);
-    } catch (e) {
-      // Ignore logout errors
-    } finally {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('token');
-      await _storage.clearRole();
+    final token = await TokenStorage.getToken();
+    if (token != null && token.isNotEmpty) {
+      try {
+        final dio = await DioFactory.getDio();
+        await dio.post(ApiConstants.logout);
+      } catch (e) {
+        // Always clear local session even if remote call fails
+      }
     }
+    await TokenStorage.clearAll();
+    await _storage.clearRole();
   }
 
   @override
@@ -188,17 +178,16 @@ class BackendAuthDataSource implements AuthRemoteDataSource {
       final dio = await DioFactory.getDio();
       final response = await dio.post(
         ApiConstants.sendOtp,
-        data: {
-          'email': email,
-        },
+        data: {'email': email},
       );
-
-      if (response.statusCode != 200 || response.data['success'] != true) {
-        throw AuthException(response.data['message'] ?? 'Failed to send OTP.');
+      if ((response.statusCode ?? 0) < 200 || (response.statusCode ?? 0) >= 300) {
+        throw const AuthException('Failed to send OTP.');
       }
     } on DioException catch (e) {
-      final message = e.response?.data['message'] ?? 'Failed to send OTP.';
-      throw AuthException(message);
+      _handleDioException(e);
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw const AuthException('An unexpected error occurred. Please try again.');
     }
   }
 
@@ -211,14 +200,22 @@ class BackendAuthDataSource implements AuthRemoteDataSource {
         data: {'email': email, 'code': code},
       );
 
-      if (response.statusCode != 200 || response.data['success'] != true) {
-        throw AuthException(response.data['message'] ?? 'Invalid OTP.');
+      if ((response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300) {
+        final dataMap = response.data['data'] as Map<String, dynamic>? ?? response.data as Map<String, dynamic>;
+        final resetToken = dataMap['reset_token']?.toString() ?? dataMap['token']?.toString() ?? response.data['reset_token']?.toString() ?? response.data['token']?.toString() ?? '';
+        await TokenStorage.saveResetToken(resetToken);
+        return resetToken;
+      } else {
+        throw const AuthException('Failed to verify OTP.');
       }
-      
-      return response.data['data']['reset_token'] as String;
     } on DioException catch (e) {
-      final message = e.response?.data['message'] ?? 'Invalid OTP.';
-      throw AuthException(message);
+      if (e.response?.statusCode == 422) {
+        throw const AuthException('Invalid or expired OTP code.');
+      }
+      _handleDioException(e);
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw const AuthException('An unexpected error occurred. Please try again.');
     }
   }
 
@@ -229,32 +226,103 @@ class BackendAuthDataSource implements AuthRemoteDataSource {
     required String password,
     required String passwordConfirmation,
   }) async {
-    try {
-      if (password != passwordConfirmation) {
-        throw const AuthException('Passwords do not match.');
-      }
+    final resetToken = await TokenStorage.getResetToken();
+    if (resetToken == null || resetToken.isEmpty) {
+      throw const AuthException('Session expired. Please request a new OTP.');
+    }
 
+    try {
       final dio = await DioFactory.getDio();
-      // Since the frontend previously passed 'otp', we map it to 'token' which is expected by Laravel backend
       final response = await dio.post(
         ApiConstants.resetPassword,
         data: {
           'email': email,
-          'token': otp,
+          'token': resetToken,
+          'reset_token': resetToken,
           'password': password,
           'password_confirmation': passwordConfirmation,
         },
       );
 
-      if (response.statusCode != 200 || response.data['success'] != true) {
-        throw AuthException(
-          response.data['message'] ?? 'Failed to reset password.',
-        );
+      if ((response.statusCode ?? 0) < 200 || (response.statusCode ?? 0) >= 300) {
+        throw const AuthException('Failed to reset password.');
       }
     } on DioException catch (e) {
-      final message =
-          e.response?.data['message'] ?? 'Failed to reset password.';
-      throw AuthException(message);
+      _handleDioException(e);
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw const AuthException('An unexpected error occurred. Please try again.');
+    }
+  }
+
+  @override
+  Future<void> sendPasswordResetLink(String email) async {
+    try {
+      final dio = await DioFactory.getDio();
+      final response = await dio.post(
+        ApiConstants.resetPasswordLink,
+        data: {'email': email},
+      );
+      if ((response.statusCode ?? 0) < 200 || (response.statusCode ?? 0) >= 300) {
+        throw const AuthException('Failed to send OTP.');
+      }
+    } on DioException catch (e) {
+      _handleDioException(e);
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw const AuthException('An unexpected error occurred. Please try again.');
+    }
+  }
+
+  static Never _handleDioException(DioException e) {
+    if (e.response != null) {
+      final statusCode = e.response?.statusCode;
+      final data = e.response?.data;
+
+      if (statusCode == 401) {
+        throw const AuthException('Invalid email or password.');
+      } else if (statusCode == 403) {
+        throw const AuthException('Forbidden request, try again later');
+      } else if (statusCode == 404) {
+        throw const AuthException('User not found.');
+      } else if (statusCode == 422) {
+        String errorMessage = 'Validation Error';
+        if (data is Map<String, dynamic> && data['errors'] is Map<String, dynamic>) {
+          final errors = data['errors'] as Map<String, dynamic>;
+          if (errors.containsKey('email')) {
+            final val = errors['email'];
+            errorMessage = val is List ? val.first.toString() : val.toString();
+          } else if (errors.containsKey('phone')) {
+            final val = errors['phone'];
+            errorMessage = val is List ? val.first.toString() : val.toString();
+          } else if (errors.containsKey('password')) {
+            final val = errors['password'];
+            errorMessage = val is List ? val.first.toString() : val.toString();
+          } else if (errors.isNotEmpty) {
+            final val = errors.values.first;
+            errorMessage = val is List ? val.first.toString() : val.toString();
+          }
+        } else if (data is Map<String, dynamic> && data['message'] != null) {
+          errorMessage = data['message'].toString();
+        }
+        throw AuthException(errorMessage);
+      } else if (data is Map<String, dynamic> && data['message'] != null) {
+        throw AuthException(data['message'].toString());
+      } else if (statusCode != null && statusCode >= 500) {
+        throw const AuthException('Server error, try again later');
+      }
+    }
+
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        throw const AuthException('Connection timeout, try again later');
+      case DioExceptionType.connectionError:
+      case DioExceptionType.unknown:
+        throw const AuthException('Please check your internet connection');
+      default:
+        throw const AuthException('Network error. Please try again.');
     }
   }
 }
